@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-dark: #050c0a;
+  --color-brand-primary: #00d293;
+  --color-brand-secondary: #064e3b;
+  --color-brand-surface: #0d1a16;
+  --color-brand-card: #12231e;
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Scalable font sizes */
+  --font-size-xs: calc(0.75rem * var(--text-scale, 1));
+  --font-size-sm: calc(0.875rem * var(--text-scale, 1));
+  --font-size-base: calc(1rem * var(--text-scale, 1));
+  --font-size-lg: calc(1.125rem * var(--text-scale, 1));
+  --font-size-xl: calc(1.25rem * var(--text-scale, 1));
+  --font-size-2xl: calc(1.5rem * var(--text-scale, 1));
+  --font-size-3xl: calc(1.875rem * var(--text-scale, 1));
+  --font-size-7xl: calc(4.5rem * var(--text-scale, 1));
+  --font-size-9xl: calc(8rem * var(--text-scale, 1));
+}
+
+@layer base {
+  body {
+    @apply bg-brand-dark text-white font-sans antialiased;
+    direction: rtl;
+  }
+}
+
+.glass-card {
+  @apply bg-brand-card/60 backdrop-blur-md border border-white/5 rounded-3xl;
+}
+
+.dashed-card {
+  @apply bg-brand-card/40 border border-dashed border-brand-primary/20 rounded-3xl;
+}
+
+.prayer-gradient {
+  background: linear-gradient(135deg, var(--color-brand-primary) 0%, color-mix(in srgb, var(--color-brand-primary), black 30%) 100%);
+}
+
+.active-nav {
+  @apply text-brand-primary;
+}
+
+/* Custom scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-brand-dark;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-brand-primary/20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-brand-primary/40;
+}
