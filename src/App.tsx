@@ -14,6 +14,7 @@ import {
   RotateCcw, 
   Volume2, 
   Vibrate,
+  VolumeX,
   Moon,
   Sun,
   Clock,
@@ -46,6 +47,7 @@ import {
 import { Coordinates, CalculationMethod, PrayerTimes } from "adhan";
 import { cn, MORNING_DHIKR, EVENING_DHIKR, PRAYER_NAMES, DhikrItem } from "./lib/utils";
 import { SURAHS } from "./lib/quranData";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 type View = "home" | "dhikr" | "subha" | "settings" | "qibla" | "quran" | "calendar";
 
@@ -56,6 +58,8 @@ export default function App() {
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null);
   const [nextPrayer, setNextPrayer] = useState<string>("");
   const [timeToNext, setTimeToNext] = useState<string>("");
+  const [notificationMode, setNotificationMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
+  const [lastNotifiedPrayer, setLastNotifiedPrayer] = useState<string | null>(null);
 
   // Global Settings
   const [primaryColor, setPrimaryColor] = useState("#0bda84");
@@ -101,6 +105,74 @@ export default function App() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const triggerNotification = async () => {
+    if (notificationMode === 'silent') return;
+
+    // Vibrate for both 'vibrate' and 'sound' modes
+    if (navigator.vibrate) {
+      navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+
+    if (notificationMode === 'sound') {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash-preview-tts",
+          contents: [{ parts: [{ text: 'الله أكبر، الله أكبر' }] }],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' },
+              },
+            },
+          },
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+          const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+          audio.play();
+        }
+      } catch (error) {
+        console.error("TTS Error:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!prayerTimes) return;
+
+    const checkPrayer = () => {
+      const now = new Date();
+      const currentPrayer = prayerTimes.currentPrayer();
+      
+      // If we just entered a new prayer time
+      if (currentPrayer !== "none" && currentPrayer !== "sunrise" && currentPrayer !== lastNotifiedPrayer) {
+        const prayerTime = prayerTimes.timeForPrayer(currentPrayer);
+        if (prayerTime) {
+          const diff = Math.abs(now.getTime() - prayerTime.getTime());
+          // If we are within 5 seconds of the actual prayer time
+          if (diff < 5000) {
+            triggerNotification();
+            setLastNotifiedPrayer(currentPrayer);
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(checkPrayer, 1000);
+    return () => clearInterval(interval);
+  }, [prayerTimes, lastNotifiedPrayer, notificationMode]);
+
+  const cycleNotificationMode = () => {
+    setNotificationMode(prev => {
+      if (prev === 'sound') return 'vibrate';
+      if (prev === 'vibrate') return 'silent';
+      return 'sound';
+    });
+  };
 
   useEffect(() => {
     if (showSplash) {
@@ -178,12 +250,19 @@ export default function App() {
                   <div className="text-right">
                     <p className="text-[9px] text-white/80 font-medium mb-0.5">الصلاة القادمة</p>
                     <h2 className="text-2xl font-bold text-white">{getPrayerNameArabic(nextPrayer)}</h2>
-                    <p className="text-[9px] text-white/70 mt-0.5">موسكو، روسيا</p>
+                    <p className="text-[9px] text-white/70 mt-0.5">موسكو، الولايات المتحدة الروسية</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between mt-5 bg-white/10 backdrop-blur-sm rounded-xl p-2.5">
-                  <Volume2 size={16} className="text-white" />
+                  <button 
+                    onClick={cycleNotificationMode}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    {notificationMode === 'sound' && <Volume2 size={16} className="text-white" />}
+                    {notificationMode === 'vibrate' && <Vibrate size={16} className="text-white" />}
+                    {notificationMode === 'silent' && <VolumeX size={16} className="text-white" />}
+                  </button>
                   <div className="flex items-center gap-1.5 text-white text-[10px] font-medium">
                     <span>الوقت المتبقي: {timeToNext}</span>
                     <Clock size={12} />
@@ -711,15 +790,6 @@ function QuranView({ onBack }: { onBack: () => void }) {
   );
 }
 
-const JUZ_NAMES: Record<number, string> = {
-  1: "الجزء الأول", 2: "الجزء الثاني", 3: "الجزء الثالث", 4: "الجزء الرابع", 5: "الجزء الخامس",
-  6: "الجزء السادس", 7: "الجزء السابع", 8: "الجزء الثامن", 9: "الجزء التاسع", 10: "الجزء العاشر",
-  11: "الجزء الحادي عشر", 12: "الجزء الثاني عشر", 13: "الجزء الثالث عشر", 14: "الجزء الرابع عشر", 15: "الجزء الخامس عشر",
-  16: "الجزء السادس عشر", 17: "الجزء السابع عشر", 18: "الجزء الثامن عشر", 19: "الجزء التاسع عشر", 20: "الجزء العشرون",
-  21: "الجزء الحادي والعشرون", 22: "الجزء الثاني والعشرون", 23: "الجزء الثالث والعشرون", 24: "الجزء الرابع والعشرون", 25: "الجزء الخامس والعشرون",
-  26: "الجزء السادس والعشرون", 27: "الجزء السابع والعشرون", 28: "الجزء الثامن والعشرون", 29: "الجزء التاسع والعشرون", 30: "الجزء الثلاثون"
-};
-
 function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah }: { 
   surahId: number, 
   surahName: string, 
@@ -782,29 +852,28 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
 
   const currentPage = pageNumbers[currentPageIndex];
   const currentAyahs = pages[currentPage] || [];
-  const currentJuz = currentAyahs[0]?.juz;
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex flex-col h-full bg-[#121212] text-[#e0e0e0] overflow-hidden font-serif"
+      className="flex flex-col h-full bg-brand-dark text-text-main overflow-hidden"
     >
-      {/* Header - Traditional Mushaf Style */}
-      <header className="px-6 py-4 flex items-center justify-between z-20 text-xs opacity-50 font-sans">
-        <div className="text-right">
-          <span>{JUZ_NAMES[currentJuz] || ""}</span>
+      {/* Header */}
+      <header className="p-3 flex items-center justify-between border-b border-white/5 z-20">
+        <button onClick={onBack} className="text-text-muted/60">
+          <ArrowRight size={20} />
+        </button>
+        <div className="text-center">
+          <span className="text-[9px] text-brand-primary font-bold tracking-widest uppercase">
+            صفحة {currentPage} من 604
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span>{surahName}</span>
-          <button onClick={onBack} className="text-white/40 hover:text-white transition-colors mr-2">
-            <ArrowRight size={16} />
-          </button>
-        </div>
+        <div className="w-5" /> {/* Spacer */}
       </header>
 
-      {/* Content Area */}
+      {/* Content Area with Swiping Simulation */}
       <div className="flex-1 relative overflow-hidden">
         <AnimatePresence mode="wait">
           {loading ? (
@@ -819,95 +888,95 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
           ) : (
             <motion.div
               key={currentPage}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="absolute inset-0 flex flex-col p-6 pt-2 overflow-hidden"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute inset-0 flex flex-col p-4 overflow-hidden"
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={(_, info) => {
+                // In RTL: dragging left (negative x) goes to NEXT page
+                // dragging right (positive x) goes to PREVIOUS page
                 if (info.offset.x > 100) handlePrevPage();
                 else if (info.offset.x < -100) handleNextPage();
               }}
             >
-              {/* Surah Header Frame - More Ornate */}
+              {/* Surah Decorative Header (Only on the first page of the surah) */}
               {currentAyahs[0]?.numberInSurah === 1 && (
-                <div className="flex flex-col items-center mb-6">
-                  <div className="relative w-full max-w-[340px] h-14 flex items-center justify-center">
-                    <svg className="absolute inset-0 w-full h-full text-white/20" viewBox="0 0 300 50" fill="none" preserveAspectRatio="none">
-                      <path d="M10 5H290C295 5 295 10 295 10V40C295 40 295 45 290 45H10C5 45 5 40 5 40V10C5 10 5 5 10 5Z" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M15 10H285V40H15V10Z" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
-                      {/* Decorative corners */}
-                      <circle cx="10" cy="25" r="3" fill="currentColor" />
-                      <circle cx="290" cy="25" r="3" fill="currentColor" />
-                      <path d="M30 25H60M240 25H270" stroke="currentColor" strokeWidth="1" />
-                    </svg>
-                    <h2 className="text-2xl font-bold text-white/90 font-serif">سورة {surahName}</h2>
+                <div className="flex flex-col items-center mb-6 mt-2 gap-4">
+                  <div className="relative mx-auto w-fit px-10 py-2 border border-brand-primary/30 rounded-full flex items-center justify-center">
+                    <div className="absolute left-3 w-1 h-1 bg-brand-primary rounded-full" />
+                    <h2 className="text-xl font-bold text-brand-primary font-serif">سورة {surahName}</h2>
+                    <div className="absolute right-3 w-1 h-1 bg-brand-primary rounded-full" />
                   </div>
                   
-                  {/* Basmala */}
+                  {/* Basmala centered below Surah Name */}
                   {surahId !== 9 && (
-                    <p className="text-3xl mt-6 mb-4 text-white font-serif">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                    <p className="text-3xl font-serif text-text-main/90">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
                   )}
                 </div>
               )}
 
-              {/* Verses Flow - Justified and Large */}
-              <div className="text-center text-justify leading-[2.8] text-[26px] font-medium text-white/95 space-x-reverse space-x-1 overflow-y-auto pb-24 custom-scrollbar font-serif">
-                {currentAyahs.map((ayah) => {
+              {/* Verses Grid/Flow - Reduced font size and line height to fit without scrolling */}
+              <div className="text-center leading-[2.2] text-lg font-medium text-text-main/90 space-x-reverse space-x-1 overflow-hidden">
+                {currentAyahs.map((ayah, index) => {
                   let text = ayah.text;
+                  // Remove Basmala from the text if present (it's often prefixed in the first ayah)
+                  // We do this for all surahs to ensure the header basmala is the only one shown
                   text = text.replace("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "").trim();
+                  
+                  // Special case for Al-Fatiha where Basmala is the first verse
+                  // If we already showed it in the header, we might want to hide the first verse if it's just Basmala
+                  // But usually people want to see the verse number. 
+                  // If text is empty after replacement, it means it was just Basmala.
                   if (!text && surahId === 1) text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
                   if (!text) return null;
 
                   return (
                     <React.Fragment key={ayah.number}>
-                      <span className="inline">{text}</span>
-                      <span className="inline-flex items-center justify-center mx-1.5 relative top-1">
-                        <span className="text-[11px] font-bold text-white/60 z-10">{ayah.numberInSurah}</span>
-                        <svg className="absolute inset-0 w-7 h-7 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
-                          <path d="M12 3V5M12 19V21M3 12H5M19 12H21" strokeWidth="1" />
-                        </svg>
+                      <span className="inline leading-relaxed">{text}</span>
+                      <span className="inline-flex items-center justify-center mx-1 text-brand-primary/60 font-serif text-base">
+                        ﴿{ayah.numberInSurah}﴾
                       </span>
                     </React.Fragment>
                   );
                 })}
               </div>
 
-              {/* Page Number Footer - Oval Style */}
-              <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none">
-                <div className="relative px-5 py-0.5 min-w-[50px] flex items-center justify-center">
-                  <svg className="absolute inset-0 w-full h-full text-white/20" viewBox="0 0 60 24" fill="none">
-                    <ellipse cx="30" cy="12" rx="28" ry="10" stroke="currentColor" strokeWidth="1" />
-                  </svg>
-                  <span className="text-[11px] font-bold text-white/40 z-10 font-sans">
-                    {currentPage}
-                  </span>
+              {/* Surah Footer Info (Only on the first page) */}
+              {currentAyahs[0]?.numberInSurah === 1 && (
+                <div className="mt-auto pt-12 text-center border-t border-white/5">
+                  <p className="text-[10px] text-white/40 font-bold">
+                    {surahInfo?.numberOfAyahs} آيات • {surahInfo?.revelationType === "Meccan" ? "مكية" : "مدنية"}
+                  </p>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Navigation Hints Overlay */}
+      {/* Navigation Hints */}
       {!loading && pageNumbers.length > 0 && (
-        <div className="p-4 flex justify-between items-center text-[10px] font-bold text-white/20 uppercase tracking-widest bg-gradient-to-t from-[#121212] to-transparent">
+        <div className="p-3 flex justify-between items-center text-[9px] font-bold text-text-muted/20 uppercase tracking-widest border-t border-brand-border">
           <button 
             onClick={handlePrevPage} 
             disabled={currentPageIndex === 0 && !onPrevSurah}
-            className="disabled:opacity-0 flex items-center gap-2 hover:text-white transition-colors"
+            className="disabled:opacity-0 flex items-center gap-2"
           >
             <ChevronRight size={14} />
             السابق
           </button>
           
+          <div className="text-brand-primary font-bold">
+            صفحة {currentPage}
+          </div>
+
           <button 
             onClick={handleNextPage} 
             disabled={currentPageIndex === pageNumbers.length - 1 && !onNextSurah}
-            className="disabled:opacity-0 flex items-center gap-2 hover:text-white transition-colors"
+            className="disabled:opacity-0 flex items-center gap-2"
           >
             التالي
             <ChevronLeft size={14} />
