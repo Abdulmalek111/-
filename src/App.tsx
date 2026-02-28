@@ -111,9 +111,8 @@ export default function App() {
             setTimeout(() => setShowSplash(false), 800);
             return 100;
           }
-          // Random increment to make it feel more natural
-          const inc = Math.floor(Math.random() * 5) + 2;
-          return Math.min(prev + inc, 100);
+          // Increment by 1 every 100ms for exactly 10 seconds total
+          return Math.min(prev + 1, 100);
         });
       }, 100);
       return () => clearInterval(interval);
@@ -1270,37 +1269,79 @@ function CalendarView({ onBack }: { onBack: () => void }) {
 function SplashScreen({ progress }: { progress: number }) {
   return (
     <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-[#041c14] overflow-hidden relative shadow-2xl items-center justify-between py-16" dir="rtl">
-      <div className="flex-1 flex flex-col items-center justify-center w-full px-10 gap-16">
-        {/* Text */}
-        <div className="text-center space-y-4">
-          <h1 className="text-6xl font-bold text-white tracking-tight">طُمأنينة</h1>
-          <p className="text-brand-primary text-base font-medium opacity-80">مرحباً بك في طُمأنينة</p>
-        </div>
+      {/* Aesthetic Background Touches */}
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]" />
+      
+      <div className="flex-1 flex flex-col items-center justify-center w-full px-10 gap-12 relative z-10">
+        {/* Logo & Text with Animation */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="text-center space-y-4"
+        >
+          <div className="flex items-center justify-center gap-3 text-white">
+            <motion.div
+              animate={{ 
+                rotate: [0, 5, 0, -5, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ 
+                duration: 4, 
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <Leaf size={40} strokeWidth={1.5} className="text-brand-primary" />
+            </motion.div>
+            <h1 className="text-4xl font-bold tracking-tight">طُمأنينة</h1>
+          </div>
+          
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.8 }}
+            transition={{ delay: 0.5, duration: 1 }}
+            className="text-brand-primary text-sm font-medium"
+          >
+            مرحباً بك في طُمأنينة
+          </motion.p>
+        </motion.div>
 
         {/* Loading Bar */}
-        <div className="w-full space-y-4">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="w-full space-y-4"
+        >
           <div className="flex justify-between items-center text-[10px] font-bold">
             <span className="text-brand-primary">{progress}%</span>
             <span className="text-white/40">جاري التحميل...</span>
           </div>
           <div className="w-full h-1 bg-brand-hover rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-brand-primary"
+              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(0,210,147,0.5)]"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.1 }}
             />
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-2 text-text-muted/20 text-[10px] font-bold tracking-[0.2em] uppercase">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="flex items-center gap-2 text-text-muted/20 text-[10px] font-bold tracking-[0.2em] uppercase"
+      >
         <span>SPIRITUALITY & PEACE</span>
         <div className="w-4 h-4 rounded-full bg-brand-primary/10 flex items-center justify-center">
           <Sparkles size={8} className="text-brand-primary" />
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
