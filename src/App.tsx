@@ -48,6 +48,7 @@ import { Coordinates, CalculationMethod, PrayerTimes } from "adhan";
 import { cn, MORNING_DHIKR, EVENING_DHIKR, PRAYER_NAMES, DhikrItem } from "./lib/utils";
 import { SURAHS } from "./lib/quranData";
 import { GoogleGenAI, Modality } from "@google/genai";
+import { translations, Language } from "./translations";
 
 type View = "home" | "dhikr" | "subha" | "settings" | "qibla" | "quran" | "calendar";
 
@@ -64,6 +65,9 @@ export default function App() {
   // Global Settings
   const [primaryColor, setPrimaryColor] = useState("#0bda84");
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [language, setLanguage] = useState<Language>("ar");
+
+  const t = translations[language];
 
   useEffect(() => {
     // Apply primary color globally
@@ -215,17 +219,8 @@ export default function App() {
     }
   }, [showSplash]);
 
-  const getPrayerNameArabic = (p: string) => {
-    const names: Record<string, string> = {
-      fajr: "صلاة الفجر",
-      sunrise: "شروق الشمس",
-      dhuhr: "صلاة الظهر",
-      asr: "صلاة العصر",
-      maghrib: "صلاة المغرب",
-      isha: "صلاة العشاء",
-      none: "لا يوجد"
-    };
-    return names[p] || p;
+  const getPrayerName = (p: string) => {
+    return t.prayerNames[p as keyof typeof t.prayerNames] || p;
   };
 
   const formatPrayerTime = (date: Date | undefined) => {
@@ -234,16 +229,16 @@ export default function App() {
   };
 
   if (showSplash) {
-    return <SplashScreen progress={loadingProgress} />;
+    return <SplashScreen progress={loadingProgress} language={language} />;
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl border-x border-brand-border" dir="rtl">
+    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl border-x border-brand-border" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-3">
         <div className="flex items-center gap-2 text-brand-primary">
           <Leaf size={20} />
-          <h1 className="text-base font-bold">طُمأنينة</h1>
+          <h1 className="text-base font-bold">{t.appName}</h1>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
@@ -272,8 +267,8 @@ export default function App() {
                     </h3>
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] text-white/80 font-medium mb-0.5">الصلاة القادمة</p>
-                    <h2 className="text-2xl font-bold text-white">{getPrayerNameArabic(nextPrayer)}</h2>
+                    <p className="text-[9px] text-white/80 font-medium mb-0.5">{t.nextPrayer}</p>
+                    <h2 className="text-2xl font-bold text-white">{getPrayerName(nextPrayer)}</h2>
                     <p className="text-[9px] text-white/70 mt-0.5">موسكو، الولايات المتحدة الروسية</p>
                   </div>
                 </div>
@@ -288,7 +283,7 @@ export default function App() {
                     {notificationMode === 'silent' && <VolumeX size={16} className="text-white" />}
                   </button>
                   <div className="flex items-center gap-1.5 text-white text-[10px] font-medium">
-                    <span>الوقت المتبقي: {timeToNext}</span>
+                    <span>{t.timeLeft}: {timeToNext}</span>
                     <Clock size={12} />
                   </div>
                 </div>
@@ -298,11 +293,11 @@ export default function App() {
               {prayerTimes && (
                 <div className="glass-card p-4 grid grid-cols-5 gap-2">
                   {[
-                    { id: 'fajr', label: 'فجر' },
-                    { id: 'dhuhr', label: 'ظهر' },
-                    { id: 'asr', label: 'عصر' },
-                    { id: 'maghrib', label: 'مغرب' },
-                    { id: 'isha', label: 'عشاء' }
+                    { id: 'fajr', label: t.prayerNames.fajr },
+                    { id: 'dhuhr', label: t.prayerNames.dhuhr },
+                    { id: 'asr', label: t.prayerNames.asr },
+                    { id: 'maghrib', label: t.prayerNames.maghrib },
+                    { id: 'isha', label: t.prayerNames.isha }
                   ].map((p) => (
                     <div key={p.id} className={cn(
                       "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors",
@@ -319,33 +314,33 @@ export default function App() {
 
               {/* Main Sections Header */}
               <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-text-main">الأقسام الرئيسية</h3>
-                <button className="text-[10px] text-brand-primary font-medium">عرض الكل</button>
+        <h3 className="text-sm font-bold text-text-main">{t.mainSections}</h3>
+                <button className="text-[10px] text-brand-primary font-medium">{t.viewAll}</button>
               </div>
 
               {/* Main Sections Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <SectionButton 
                   icon={<Sun />} 
-                  title="الأذكار" 
-                  subtitle="جميع الأذكار" 
+                  title={t.dhikr} 
+                  subtitle={t.allDhikr} 
                   onClick={() => setActiveView("dhikr")}
                 />
                 <SectionButton 
                   icon={<BookOpen />} 
-                  title="الأدعية" 
-                  subtitle="أدعية مأثورة" 
+                  title={t.supplications} 
+                  subtitle={t.supplications} 
                 />
                 <SectionButton 
                   icon={<Calendar />} 
-                  title="التقويم" 
-                  subtitle="بالهجري" 
+                  title={t.calendar} 
+                  subtitle={t.hijriCalendar} 
                   onClick={() => setActiveView("calendar")}
                 />
                 <SectionButton 
                   icon={<BookOpen />} 
-                  title="القرآن" 
-                  subtitle="تلاوة وتفسير" 
+                  title={t.quran} 
+                  subtitle={t.quranTafsir} 
                   onClick={() => setActiveView("quran")}
                 />
               </div>
@@ -355,7 +350,7 @@ export default function App() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Quote size={14} className="text-brand-primary rotate-180" />
-                    <h3 className="text-brand-primary font-bold text-xs">حديث اليوم</h3>
+                    <h3 className="text-brand-primary font-bold text-xs">{t.hadithToday}</h3>
                   </div>
                   <Quote size={14} className="text-brand-primary" />
                 </div>
@@ -367,27 +362,28 @@ export default function App() {
 
               {/* Extra Services */}
               <div className="space-y-3">
-                <h3 className="font-bold text-sm">خدمات إضافية</h3>
+                <h3 className="font-bold text-sm">{t.extraServices}</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <ServiceIcon icon={<Compass size={18} />} label="القبلة" />
-                  <ServiceIcon icon={<MapPin size={18} />} label="المساجد" />
-                  <ServiceIcon icon={<Calendar size={18} />} label="التقويم" onClick={() => setActiveView("calendar")} />
+                  <ServiceIcon icon={<Compass size={18} />} label={t.qibla} />
+                  <ServiceIcon icon={<MapPin size={18} />} label={t.mosques} />
+                  <ServiceIcon icon={<Calendar size={18} />} label={t.calendar} onClick={() => setActiveView("calendar")} />
                 </div>
               </div>
             </motion.div>
           )}
 
-          {activeView === "dhikr" && <DhikrView onBack={() => setActiveView("home")} />}
-          {activeView === "subha" && <SubhaView onBack={() => setActiveView("home")} />}
-          {activeView === "quran" && <QuranView onBack={() => setActiveView("home")} />}
-          {activeView === "calendar" && <CalendarView onBack={() => setActiveView("home")} />}
+          {activeView === "dhikr" && <DhikrView onBack={() => setActiveView("home")} language={language} />}
+          {activeView === "subha" && <SubhaView onBack={() => setActiveView("home")} language={language} />}
+          {activeView === "quran" && <QuranView onBack={() => setActiveView("home")} language={language} />}
+          {activeView === "calendar" && <CalendarView onBack={() => setActiveView("home")} language={language} />}
           {activeView === "settings" && (
             <SettingsView 
               onBack={() => setActiveView("home")} 
-              settings={{ primaryColor, isDarkMode }}
+              settings={{ primaryColor, isDarkMode, language }}
               onUpdate={(key, value) => {
                 if (key === 'primaryColor') setPrimaryColor(value as string);
                 if (key === 'isDarkMode') setIsDarkMode(value as boolean);
+                if (key === 'language') setLanguage(value as Language);
               }}
             />
           )}
@@ -396,10 +392,10 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-[400px] mx-auto bg-brand-surface/90 backdrop-blur-xl border-t border-brand-border px-6 py-3 flex justify-between items-center z-50">
-        <NavButton active={activeView === "home"} icon={<Home size={22} />} label="الرئيسية" onClick={() => setActiveView("home")} />
-        <NavButton active={activeView === "dhikr"} icon={<BookOpen size={22} />} label="الأذكار" onClick={() => setActiveView("dhikr")} />
-        <NavButton active={activeView === "subha"} icon={<Fingerprint size={22} />} label="المسبحة" onClick={() => setActiveView("subha")} />
-        <NavButton active={activeView === "settings"} icon={<Settings size={22} />} label="الإعدادات" onClick={() => setActiveView("settings")} />
+        <NavButton active={activeView === "home"} icon={<Home size={22} />} label={t.home} onClick={() => setActiveView("home")} />
+        <NavButton active={activeView === "dhikr"} icon={<BookOpen size={22} />} label={t.dhikr} onClick={() => setActiveView("dhikr")} />
+        <NavButton active={activeView === "subha"} icon={<Fingerprint size={22} />} label={t.subha} onClick={() => setActiveView("subha")} />
+        <NavButton active={activeView === "settings"} icon={<Settings size={22} />} label={t.settings} onClick={() => setActiveView("settings")} />
       </nav>
     </div>
   );
@@ -446,11 +442,12 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
   );
 }
 
-function DhikrView({ onBack }: { onBack: () => void }) {
+function DhikrView({ onBack, language }: { onBack: () => void, language: Language }) {
+  const t = translations[language];
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   if (activeCategory === "morning" || activeCategory === "evening") {
-    return <DhikrDetailView category={activeCategory} onBack={() => setActiveCategory(null)} />;
+    return <DhikrDetailView category={activeCategory} onBack={() => setActiveCategory(null)} language={language} />;
   }
 
   return (
@@ -471,9 +468,9 @@ function DhikrView({ onBack }: { onBack: () => void }) {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-text-main">جميع الأذكار</h2>
+          <h2 className="text-xl font-bold text-text-main">{t.allDhikr}</h2>
           <button onClick={onBack} className="w-9 h-9 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary">
-            <ArrowRight size={20} />
+            {language === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
           </button>
         </div>
       </div>
@@ -482,7 +479,7 @@ function DhikrView({ onBack }: { onBack: () => void }) {
       <div className="relative">
         <input 
           type="text" 
-          placeholder="ابحث عن ذكر أو دعاء..." 
+          placeholder={t.search} 
           className="w-full bg-brand-card/40 border border-brand-border rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
         />
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary" />
@@ -491,17 +488,17 @@ function DhikrView({ onBack }: { onBack: () => void }) {
       {/* Basic Dhikr */}
       <div className="space-y-4">
         <div className="flex items-center justify-end gap-2 text-brand-primary">
-          <h3 className="font-bold">الأذكار الأساسية</h3>
+          <h3 className="font-bold">{t.mainSections}</h3>
           <Sparkles size={18} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <DhikrImageCard 
-            title="أذكار الصباح" 
+            title={t.morningDhikr} 
             image="https://picsum.photos/seed/morning/400/300" 
             onClick={() => setActiveCategory("morning")}
           />
           <DhikrImageCard 
-            title="أذكار المساء" 
+            title={t.eveningDhikr} 
             image="https://picsum.photos/seed/evening/400/300" 
             onClick={() => setActiveCategory("evening")}
           />
@@ -622,7 +619,7 @@ function DhikrCard({ item }: { item: DhikrItem }) {
               : "bg-brand-primary text-brand-dark active:scale-95"
           )}
         >
-          <span>التكرار</span>
+          <span>{language === 'ar' ? 'التكرار' : (language === 'ru' ? 'Повтор' : 'Repeat')}</span>
           <span className="font-mono">{currentCount} / {item.count}</span>
         </button>
         <div className="flex gap-2">
@@ -638,9 +635,10 @@ function DhikrCard({ item }: { item: DhikrItem }) {
   );
 }
 
-function DhikrDetailView({ category, onBack }: { category: string, onBack: () => void }) {
+function DhikrDetailView({ category, onBack, language }: { category: string, onBack: () => void, language: Language }) {
+  const t = translations[language];
   const items = category === "morning" ? MORNING_DHIKR : EVENING_DHIKR;
-  const title = category === "morning" ? "أذكار الصباح" : "أذكار المساء";
+  const title = category === "morning" ? t.morningDhikr : t.eveningDhikr;
 
   return (
     <motion.div
@@ -653,7 +651,7 @@ function DhikrDetailView({ category, onBack }: { category: string, onBack: () =>
         <div className="w-10" />
         <h2 className="text-lg font-bold">{title}</h2>
         <button onClick={onBack} className="p-2 rounded-full bg-brand-surface text-text-muted/60">
-          <ArrowRight size={20} />
+          {language === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
         </button>
       </div>
 
@@ -668,7 +666,8 @@ function DhikrDetailView({ category, onBack }: { category: string, onBack: () =>
   );
 }
 
-function QuranView({ onBack }: { onBack: () => void }) {
+function QuranView({ onBack, language }: { onBack: () => void, language: Language }) {
+  const t = translations[language];
   const [activeTab, setActiveTab] = useState("surahs");
   const [selectedSurahId, setSelectedSurahId] = useState<number | null>(null);
   
@@ -710,9 +709,9 @@ function QuranView({ onBack }: { onBack: () => void }) {
           onClick={onBack}
           className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border"
         >
-          <ArrowRight size={18} />
+          {language === 'ar' ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
         </button>
-        <h2 className="text-xl font-bold text-text-main">المصحف الشريف</h2>
+        <h2 className="text-xl font-bold text-text-main">{t.quran}</h2>
         <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
           <Bell size={18} />
         </button>
@@ -970,9 +969,10 @@ function SettingsView({
   onUpdate 
 }: { 
   onBack: () => void, 
-  settings: { primaryColor: string, isDarkMode: boolean },
+  settings: { primaryColor: string, isDarkMode: boolean, language: Language },
   onUpdate: (key: string, value: string | boolean | number) => void
 }) {
+  const t = translations[settings.language];
   const colors = [
     { name: "primary", value: "#0bda84" },
     { name: "blue", value: "#3b82f6" },
@@ -989,18 +989,18 @@ function SettingsView({
       className="flex flex-col h-full"
     >
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-brand-dark/80 backdrop-blur-md p-4 flex items-center justify-between border-b border-white/5">
+      <header className="sticky top-0 z-10 bg-brand-dark/80 backdrop-blur-md p-4 flex items-center justify-between border-b border-brand-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
             <Settings size={18} />
           </div>
-          <h1 className="text-lg font-bold text-text-main">الإعدادات</h1>
+          <h1 className="text-lg font-bold text-text-main">{t.settings}</h1>
         </div>
         <button 
           onClick={onBack}
           className="p-2 rounded-full hover:bg-brand-hover transition-colors text-text-muted"
         >
-          <ArrowRight size={24} />
+          {settings.language === 'ar' ? <ArrowRight size={24} /> : <ArrowLeft size={24} />}
         </button>
       </header>
 
@@ -1010,7 +1010,7 @@ function SettingsView({
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1.5 h-4 bg-brand-primary rounded-full" />
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">تخصيص المظهر</h3>
+            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">{t.appearance}</h3>
           </div>
           
           <div className="grid gap-4">
@@ -1018,7 +1018,7 @@ function SettingsView({
             <div className="p-5 rounded-3xl bg-brand-surface border border-brand-border">
               <div className="flex items-center gap-3 mb-5">
                 <Palette size={18} className="text-brand-primary" />
-                <span className="text-sm font-bold text-text-main">لون التطبيق</span>
+                <span className="text-sm font-bold text-text-main">{t.appColor}</span>
               </div>
               <div className="flex flex-wrap gap-4">
                 {colors.map((color) => (
@@ -1046,9 +1046,9 @@ function SettingsView({
                 <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary group-hover:scale-110 transition-transform">
                   {settings.isDarkMode ? <Moon size={22} /> : <Sun size={22} />}
                 </div>
-                <div className="text-right">
-                  <span className="block text-sm font-bold text-text-main">الوضع الليلي</span>
-                  <span className="text-[10px] text-text-muted">تغيير مظهر التطبيق</span>
+                <div className={settings.language === 'ar' ? "text-right" : "text-left"}>
+                  <span className="block text-sm font-bold text-text-main">{t.darkMode}</span>
+                  <span className="text-[10px] text-text-muted">{t.appearance}</span>
                 </div>
               </div>
               <div className={cn(
@@ -1056,7 +1056,7 @@ function SettingsView({
                 settings.isDarkMode ? "bg-brand-primary" : "bg-white/10"
               )}>
                 <motion.div 
-                  animate={{ x: settings.isDarkMode ? -24 : 0 }}
+                  animate={{ x: settings.isDarkMode ? (settings.language === 'ar' ? -24 : 24) : 0 }}
                   className="w-4 h-4 rounded-full bg-white shadow-sm" 
                 />
               </div>
@@ -1068,7 +1068,7 @@ function SettingsView({
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1.5 h-4 bg-brand-primary rounded-full" />
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">تفضيلات اللغة</h3>
+            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">{t.appLanguage}</h3>
           </div>
           
           <div className="p-5 rounded-3xl bg-brand-surface border border-brand-border flex items-center justify-between">
@@ -1076,15 +1076,19 @@ function SettingsView({
               <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
                 <Globe size={22} />
               </div>
-              <div className="text-right">
-                <span className="block text-sm font-bold text-text-main">لغة التطبيق</span>
-                <span className="text-[10px] text-text-muted">اختر لغتك المفضلة</span>
+              <div className={settings.language === 'ar' ? "text-right" : "text-left"}>
+                <span className="block text-sm font-bold text-text-main">{t.appLanguage}</span>
+                <span className="text-[10px] text-text-muted">{t.search}</span>
               </div>
             </div>
-            <select className="bg-brand-dark/40 border border-white/5 rounded-xl px-4 py-2 text-brand-primary font-bold text-xs outline-none focus:border-brand-primary/30 transition-colors cursor-pointer">
+            <select 
+              value={settings.language}
+              onChange={(e) => onUpdate('language', e.target.value)}
+              className="bg-brand-dark/40 border border-brand-border rounded-xl px-4 py-2 text-brand-primary font-bold text-xs outline-none focus:border-brand-primary/30 transition-colors cursor-pointer"
+            >
               <option value="ar">العربية</option>
               <option value="en">English</option>
-              <option value="fr">Français</option>
+              <option value="ru">Русский</option>
             </select>
           </div>
         </section>
@@ -1093,11 +1097,13 @@ function SettingsView({
         <section className="pt-4">
           <div className="p-6 rounded-3xl bg-brand-primary/5 border border-brand-primary/10 text-center">
             <Leaf size={32} className="text-brand-primary mx-auto mb-3 opacity-50" />
-            <h4 className="text-sm font-bold text-text-main mb-1">طُمأنينة</h4>
+            <h4 className="text-sm font-bold text-text-main mb-1">{t.appName}</h4>
             <p className="text-[10px] text-text-muted leading-relaxed">
-              تطبيق إسلامي متكامل يهدف إلى توفير تجربة روحانية هادئة ومميزة للمستخدم المسلم في حياته اليومية.
+              {t.welcome}
             </p>
-            <p className="text-[9px] text-brand-primary/40 mt-4 font-mono">الإصدار 1.0.0</p>
+            <p className="text-[9px] text-brand-primary/40 mt-4 font-mono">{t.version} 1.0.0</p>
+          </div>
+        </section>
           </div>
         </section>
       </div>
@@ -1105,7 +1111,8 @@ function SettingsView({
   );
 }
 
-function SubhaView({ onBack }: { onBack: () => void }) {
+function SubhaView({ onBack, language }: { onBack: () => void, language: Language }) {
+  const t = translations[language];
   const [count, setCount] = useState(0);
   const [isVibrate, setIsVibrate] = useState(true);
   const [isSound, setIsSound] = useState(true);
@@ -1131,16 +1138,16 @@ function SubhaView({ onBack }: { onBack: () => void }) {
         <button onClick={handleReset} className="text-brand-primary">
           <RotateCcw size={22} />
         </button>
-        <h2 className="text-lg font-bold text-text-main">المسبحة الرقمية</h2>
+        <h2 className="text-lg font-bold text-text-main">{t.subha}</h2>
         <button onClick={onBack} className="text-brand-primary">
-          <Menu size={22} />
+          {language === 'ar' ? <ArrowRight size={22} /> : <ArrowLeft size={22} />}
         </button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center space-y-8">
         {/* Counter Section */}
         <div className="text-center space-y-1">
-          <p className="text-[10px] text-brand-primary font-medium">الجلسة الحالية</p>
+          <p className="text-[10px] text-brand-primary font-medium">{language === 'ar' ? 'الجلسة الحالية' : (language === 'ru' ? 'Текущая сессия' : 'Current Session')}</p>
           <h3 className="text-7xl font-bold text-text-main tracking-tighter">{count}</h3>
         </div>
 
@@ -1197,7 +1204,8 @@ function SubhaControl({ icon, label, onClick }: { icon: React.ReactNode, label: 
   );
 }
 
-function CalendarView({ onBack }: { onBack: () => void }) {
+function CalendarView({ onBack, language }: { onBack: () => void, language: Language }) {
+  const t = translations[language];
   const events = [
     { title: "يوم عرفة", date: "9 ذو الحجة 1445 هـ", daysLeft: "بعد 4 أيام", icon: <Moon size={18} /> },
     { title: "عيد الأضحى المبارك", date: "10 ذو الحجة 1445 هـ", daysLeft: "بعد 5 أيام", icon: <Sparkles size={18} /> },
@@ -1217,9 +1225,9 @@ function CalendarView({ onBack }: { onBack: () => void }) {
           onClick={onBack}
           className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border"
         >
-          <ArrowRight size={18} />
+          {language === 'ar' ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
         </button>
-        <h2 className="text-xl font-bold text-text-main">التقويم الهجري</h2>
+        <h2 className="text-xl font-bold text-text-main">{t.calendar}</h2>
         <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
           <Share2 size={18} />
         </button>
@@ -1229,14 +1237,14 @@ function CalendarView({ onBack }: { onBack: () => void }) {
       <div className="flex flex-col items-center gap-1">
         <div className="flex items-center gap-8">
           <button className="text-text-muted/40 hover:text-brand-primary transition-colors">
-            <ChevronRight size={20} />
+            {language === 'ar' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
-          <h3 className="text-2xl font-bold text-brand-primary">ذو الحجة 1445 هـ</h3>
+          <h3 className="text-2xl font-bold text-brand-primary">{language === 'ar' ? 'ذو الحجة 1445 هـ' : (language === 'ru' ? 'Зуль-хиджа 1445 г.х.' : 'Dhul-Hijjah 1445 AH')}</h3>
           <button className="text-text-muted/40 hover:text-brand-primary transition-colors">
-            <ChevronLeft size={20} />
+            {language === 'ar' ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
           </button>
         </div>
-        <p className="text-[10px] text-text-muted/40 font-medium">يونيو - يوليو 2024 م</p>
+        <p className="text-[10px] text-text-muted/40 font-medium">{language === 'ar' ? 'يونيو - يوليو 2024 م' : (language === 'ru' ? 'Июнь - Июль 2024 г.' : 'June - July 2024 AD')}</p>
       </div>
 
       {/* Calendar Grid */}
@@ -1270,7 +1278,7 @@ function CalendarView({ onBack }: { onBack: () => void }) {
 
       {/* Upcoming Events */}
       <div className="space-y-4">
-                <h3 className="text-sm font-bold text-text-main">المناسبات الإسلامية القادمة</h3>
+                <h3 className="text-sm font-bold text-text-main">{t.upcomingEvents}</h3>
         <div className="space-y-3">
           {events.map((event, idx) => (
             <div key={idx} className="glass-card p-4 flex items-center justify-between group hover:bg-brand-hover transition-colors">
@@ -1292,9 +1300,10 @@ function CalendarView({ onBack }: { onBack: () => void }) {
   );
 }
 
-function SplashScreen({ progress }: { progress: number }) {
+function SplashScreen({ progress, language }: { progress: number, language: Language }) {
+  const t = translations[language];
   return (
-    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl items-center justify-between py-16" dir="rtl">
+    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl items-center justify-between py-16" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Aesthetic Background Touches */}
       <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]" />
@@ -1330,7 +1339,7 @@ function SplashScreen({ progress }: { progress: number }) {
             transition={{ delay: 0.5, duration: 1 }}
             className="text-brand-primary text-sm font-medium"
           >
-            مرحباً بك في طُمأنينة
+            {t.welcome}
           </motion.p>
         </motion.div>
 
@@ -1343,7 +1352,7 @@ function SplashScreen({ progress }: { progress: number }) {
         >
           <div className="flex justify-between items-center text-[10px] font-bold">
             <span className="text-brand-primary">{progress}%</span>
-            <span className="text-text-muted/40">جاري التحميل...</span>
+            <span className="text-text-muted/40">{t.loading}</span>
           </div>
           <div className="w-full h-1 bg-brand-hover rounded-full overflow-hidden">
             <motion.div 
