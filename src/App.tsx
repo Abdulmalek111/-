@@ -868,9 +868,17 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
 
             {ayahs.map((ayah) => {
               let text = ayah.text;
-              // Remove Basmala from the text if present (except for Al-Fatiha verse 1)
-              if (surahId !== 1 || ayah.numberInSurah !== 1) {
-                text = text.replace("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "").trim();
+              // Remove Basmala from the first ayah of all surahs except Al-Fatiha
+              if (surahId !== 1 && ayah.numberInSurah === 1) {
+                // Use a more inclusive regex that handles both standard Alef and Alef Wasla (ٱ)
+                // This targets the specific Uthmani Basmala pattern returned by the API
+                const basmalaRegex = /^بِسْمِ\s+[\u0600-\u06FF\s]*?[ٱا]لرَّحِيمِ\s*/;
+                text = text.replace(basmalaRegex, "").trim();
+              }
+              
+              if (!text && ayah.numberInSurah === 1 && surahId !== 9) {
+                // If text becomes empty (rare), we might want to show something or handle it
+                // But usually there's more text after Basmala in the first ayah
               }
               
               if (!text) return null;
