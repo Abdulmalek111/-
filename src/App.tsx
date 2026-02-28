@@ -797,9 +797,7 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
   onNextSurah?: () => void,
   onPrevSurah?: () => void
 }) {
-  const [pages, setPages] = useState<Record<number, any[]>>({});
-  const [pageNumbers, setPageNumbers] = useState<number[]>([]);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [ayahs, setAyahs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [surahInfo, setSurahInfo] = useState<any>(null);
 
@@ -807,23 +805,21 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
     const fetchSurah = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}/ar.alafasy`);
+        // Fetch both Uthmani text and Muyassar Tafsir
+        const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}/editions/quran-uthmani,ar.muyassar`);
         const data = await response.json();
+        
         if (data.code === 200) {
-          const ayahs = data.data.ayahs;
-          setSurahInfo(data.data);
+          const uthmaniAyahs = data.data[0].ayahs;
+          const tafsirAyahs = data.data[1].ayahs;
           
-          // Group ayahs by page
-          const grouped: Record<number, any[]> = {};
-          ayahs.forEach((ayah: any) => {
-            if (!grouped[ayah.page]) grouped[ayah.page] = [];
-            grouped[ayah.page].push(ayah);
-          });
+          const combined = uthmaniAyahs.map((ayah: any, index: number) => ({
+            ...ayah,
+            tafsir: tafsirAyahs[index].text
+          }));
           
-          setPages(grouped);
-          const sortedPages = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-          setPageNumbers(sortedPages);
-          setCurrentPageIndex(0);
+          setSurahInfo(data.data[0]);
+          setAyahs(combined);
         }
       } catch (error) {
         console.error("Error fetching surah:", error);
@@ -834,25 +830,6 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
     fetchSurah();
   }, [surahId]);
 
-  const handleNextPage = () => {
-    if (currentPageIndex < pageNumbers.length - 1) {
-      setCurrentPageIndex(prev => prev + 1);
-    } else if (onNextSurah) {
-      onNextSurah();
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPageIndex > 0) {
-      setCurrentPageIndex(prev => prev - 1);
-    } else if (onPrevSurah) {
-      onPrevSurah();
-    }
-  };
-
-  const currentPage = pageNumbers[currentPageIndex];
-  const currentAyahs = pages[currentPage] || [];
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -861,128 +838,97 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
       className="flex flex-col h-full bg-brand-dark text-text-main overflow-hidden"
     >
       {/* Header */}
-      <header className="p-3 flex items-center justify-between border-b border-white/5 z-20">
-        <button onClick={onBack} className="text-text-muted/60">
-          <ArrowRight size={20} />
+      <header className="p-4 flex items-center justify-between border-b border-white/5 z-20 bg-brand-dark/80 backdrop-blur-md sticky top-0">
+        <button onClick={onBack} className="text-text-muted/60 hover:text-brand-primary transition-colors">
+          <ArrowRight size={22} />
         </button>
         <div className="text-center">
-          <span className="text-[9px] text-brand-primary font-bold tracking-widest uppercase">
-            صفحة {currentPage} من 604
-          </span>
+          <h2 className="text-lg font-bold text-brand-primary">سورة {surahName}</h2>
+          <p className="text-[10px] text-text-muted uppercase tracking-widest">
+            {surahInfo?.numberOfAyahs} آيات • {surahInfo?.revelationType === "Meccan" ? "مكية" : "مدنية"}
+          </p>
         </div>
-        <div className="w-5" /> {/* Spacer */}
+        <div className="w-5" />
       </header>
 
-      {/* Content Area with Swiping Simulation */}
-      <div className="flex-1 relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div 
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key={currentPage}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute inset-0 flex flex-col p-4 overflow-hidden"
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              onDragEnd={(_, info) => {
-                // In RTL: dragging left (negative x) goes to NEXT page
-                // dragging right (positive x) goes to PREVIOUS page
-                if (info.offset.x > 100) handlePrevPage();
-                else if (info.offset.x < -100) handleNextPage();
-              }}
-            >
-              {/* Surah Decorative Header (Only on the first page of the surah) */}
-              {currentAyahs[0]?.numberInSurah === 1 && (
-                <div className="flex flex-col items-center mb-6 mt-2 gap-4">
-                  <div className="relative mx-auto w-fit px-10 py-2 border border-brand-primary/30 rounded-full flex items-center justify-center">
-                    <div className="absolute left-3 w-1 h-1 bg-brand-primary rounded-full" />
-                    <h2 className="text-xl font-bold text-brand-primary font-serif">سورة {surahName}</h2>
-                    <div className="absolute right-3 w-1 h-1 bg-brand-primary rounded-full" />
-                  </div>
-                  
-                  {/* Basmala centered below Surah Name */}
-                  {surahId !== 9 && (
-                    <p className="text-3xl font-serif text-text-main/90">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-                  )}
-                </div>
-              )}
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8 scroll-smooth">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-10 h-10 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="max-w-2xl mx-auto space-y-10">
+            {/* Basmala */}
+            {surahId !== 9 && (
+              <div className="text-center py-4">
+                <p className="text-3xl font-serif text-text-main/90">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+              </div>
+            )}
 
-              {/* Verses Grid/Flow - Reduced font size and line height to fit without scrolling */}
-              <div className="text-center leading-[2.2] text-lg font-medium text-text-main/90 space-x-reverse space-x-1 overflow-hidden">
-                {currentAyahs.map((ayah, index) => {
-                  let text = ayah.text;
-                  // Remove Basmala from the text if present (it's often prefixed in the first ayah)
-                  // We do this for all surahs to ensure the header basmala is the only one shown
-                  text = text.replace("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "").trim();
-                  
-                  // Special case for Al-Fatiha where Basmala is the first verse
-                  // If we already showed it in the header, we might want to hide the first verse if it's just Basmala
-                  // But usually people want to see the verse number. 
-                  // If text is empty after replacement, it means it was just Basmala.
-                  if (!text && surahId === 1) text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
-                  if (!text) return null;
+            {ayahs.map((ayah) => {
+              let text = ayah.text;
+              // Remove Basmala from the text if present (except for Al-Fatiha verse 1)
+              if (surahId !== 1 || ayah.numberInSurah !== 1) {
+                text = text.replace("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "").trim();
+              }
+              
+              if (!text) return null;
 
-                  return (
-                    <React.Fragment key={ayah.number}>
-                      <span className="inline leading-relaxed">{text}</span>
-                      <span className="inline-flex items-center justify-center mx-1 text-brand-primary/60 font-serif text-base">
+              return (
+                <div key={ayah.number} className="space-y-4 group">
+                  {/* Ayah Text */}
+                  <div className="relative p-6 rounded-3xl bg-brand-surface border border-brand-border group-hover:border-brand-primary/30 transition-all shadow-sm">
+                    <div className="absolute -top-3 right-6 bg-brand-primary text-brand-dark text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
+                      آية {ayah.numberInSurah}
+                    </div>
+                    
+                    <p className="text-2xl leading-[2] text-right font-medium text-text-main/95 font-serif">
+                      {text}
+                      <span className="inline-flex items-center justify-center mr-3 text-brand-primary/60 font-serif text-xl">
                         ﴿{ayah.numberInSurah}﴾
                       </span>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
+                    </p>
+                  </div>
 
-              {/* Surah Footer Info (Only on the first page) */}
-              {currentAyahs[0]?.numberInSurah === 1 && (
-                <div className="mt-auto pt-12 text-center border-t border-white/5">
-                  <p className="text-[10px] text-white/40 font-bold">
-                    {surahInfo?.numberOfAyahs} آيات • {surahInfo?.revelationType === "Meccan" ? "مكية" : "مدنية"}
-                  </p>
+                  {/* Tafsir (Explanation) */}
+                  <div className="pr-6 pl-4 py-2 border-r-2 border-brand-primary/20">
+                    <div className="flex items-center gap-2 text-brand-primary mb-2">
+                      <Sparkles size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">التفسير الميسر</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-text-muted text-right">
+                      {ayah.tafsir}
+                    </p>
+                  </div>
                 </div>
+              );
+            })}
+
+            {/* Navigation Buttons at bottom */}
+            <div className="pt-10 pb-20 flex items-center justify-between gap-4">
+              {onPrevSurah && surahId > 1 && (
+                <button 
+                  onClick={onPrevSurah}
+                  className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl bg-brand-surface border border-brand-border text-xs font-bold hover:bg-brand-hover transition-all"
+                >
+                  <ChevronRight size={16} />
+                  السورة السابقة
+                </button>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Navigation Hints */}
-      {!loading && pageNumbers.length > 0 && (
-        <div className="p-3 flex justify-between items-center text-[9px] font-bold text-text-muted/20 uppercase tracking-widest border-t border-brand-border">
-          <button 
-            onClick={handlePrevPage} 
-            disabled={currentPageIndex === 0 && !onPrevSurah}
-            className="disabled:opacity-0 flex items-center gap-2"
-          >
-            <ChevronRight size={14} />
-            السابق
-          </button>
-          
-          <div className="text-brand-primary font-bold">
-            صفحة {currentPage}
+              {onNextSurah && surahId < 114 && (
+                <button 
+                  onClick={onNextSurah}
+                  className="flex-1 flex items-center justify-center gap-2 p-4 rounded-2xl bg-brand-primary text-brand-dark text-xs font-bold hover:opacity-90 transition-all"
+                >
+                  السورة التالية
+                  <ChevronLeft size={16} />
+                </button>
+              )}
+            </div>
           </div>
-
-          <button 
-            onClick={handleNextPage} 
-            disabled={currentPageIndex === pageNumbers.length - 1 && !onNextSurah}
-            className="disabled:opacity-0 flex items-center gap-2"
-          >
-            التالي
-            <ChevronLeft size={14} />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </motion.div>
   );
 }

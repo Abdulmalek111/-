@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -12,8 +12,7 @@
   --color-text-main: var(--text-primary);
   --color-text-muted: var(--text-secondary);
   
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Amiri", serif;
+  --font-sans: "Cairo", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* Scalable font sizes */
   --font-size-xs: calc(0.75rem * var(--text-scale, 1));
