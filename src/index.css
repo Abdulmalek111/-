@@ -30,14 +30,14 @@
 :root {
   --primary: #00d293;
   --secondary: #00b37e;
-  --bg-dark: #fdfdfb;
-  --surface: #f5f5f0;
+  --bg-dark: #f8f9fa;
+  --surface: #ffffff;
   --card: #ffffff;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --border-color: rgba(0, 0, 0, 0.05);
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --border-color: rgba(0, 0, 0, 0.06);
   --hover-bg: rgba(0, 0, 0, 0.03);
-  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 4px 12px -4px rgba(0, 0, 0, 0.02);
 }
 
 .dark {
@@ -49,7 +49,7 @@
   --text-secondary: rgba(255, 255, 255, 0.6);
   --border-color: rgba(255, 255, 255, 0.05);
   --hover-bg: rgba(255, 255, 255, 0.05);
-  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
 @layer base {
@@ -61,13 +61,17 @@
 }
 
 .glass-card {
-  @apply bg-brand-card/60 backdrop-blur-md border rounded-3xl transition-all;
+  @apply bg-brand-card/70 backdrop-blur-xl border rounded-[32px] transition-all duration-300;
   border-color: var(--border-color);
   box-shadow: var(--card-shadow);
 }
 
+.glass-card:hover {
+  @apply border-brand-primary/20 shadow-lg;
+}
+
 .dashed-card {
-  @apply bg-brand-card/40 border border-dashed border-brand-primary/20 rounded-3xl;
+  @apply bg-brand-surface/50 border border-dashed border-brand-primary/30 rounded-3xl;
 }
 
 .prayer-gradient {

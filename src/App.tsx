@@ -306,10 +306,10 @@ export default function App() {
                   ].map((p) => (
                     <div key={p.id} className={cn(
                       "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors",
-                      nextPrayer === p.id ? "bg-brand-primary/20 border border-brand-primary/30" : "bg-white/5"
+                      nextPrayer === p.id ? "bg-brand-primary/20 border border-brand-primary/30" : "bg-brand-surface/50"
                     )}>
-                      <span className="text-[8px] text-white/60 font-bold">{p.label}</span>
-                      <span className="text-[10px] text-white font-bold">
+                      <span className={cn("text-[8px] font-bold", nextPrayer === p.id ? "text-brand-primary" : "text-text-muted")}>{p.label}</span>
+                      <span className="text-[10px] text-text-main font-bold">
                         {prayerTimes.timeForPrayer(p.id)?.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </span>
                     </div>
@@ -359,10 +359,10 @@ export default function App() {
                   </div>
                   <Quote size={14} className="text-brand-primary" />
                 </div>
-                <p className="text-xs leading-relaxed text-white/90 text-center font-medium">
+                <p className="text-xs leading-relaxed text-text-main/90 text-center font-medium">
                   "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى"
                 </p>
-                <p className="text-[9px] text-white/40 mt-3 text-left">— رواه البخاري</p>
+                <p className="text-[9px] text-text-muted mt-3 text-left">— رواه البخاري</p>
               </div>
 
               {/* Extra Services */}
@@ -437,7 +437,7 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
       onClick={onClick}
       className={cn(
         "flex flex-col items-center gap-1.5 transition-all active:scale-90",
-        active ? "text-brand-primary" : "text-text-muted/40"
+        active ? "text-brand-primary" : "text-text-muted/60"
       )}
     >
       {icon}
@@ -463,10 +463,10 @@ function DhikrView({ onBack }: { onBack: () => void }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button className="text-white/60">
+          <button className="text-text-muted">
             <MoreVertical size={20} />
           </button>
-          <button className="text-white/60">
+          <button className="text-text-muted">
             <Search size={20} />
           </button>
         </div>
@@ -483,7 +483,7 @@ function DhikrView({ onBack }: { onBack: () => void }) {
         <input 
           type="text" 
           placeholder="ابحث عن ذكر أو دعاء..." 
-          className="w-full bg-brand-card/40 border border-white/5 rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
+          className="w-full bg-brand-card/40 border border-brand-border rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
         />
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary" />
       </div>
@@ -612,7 +612,7 @@ function DhikrCard({ item }: { item: DhikrItem }) {
       <p className="text-lg leading-relaxed text-right font-medium">
         {item.text}
       </p>
-      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+      <div className="flex items-center justify-between pt-4 border-t border-brand-border">
         <button 
           onClick={handleIncrement}
           className={cn(
@@ -626,10 +626,10 @@ function DhikrCard({ item }: { item: DhikrItem }) {
           <span className="font-mono">{currentCount} / {item.count}</span>
         </button>
         <div className="flex gap-2">
-          <button className="p-2 rounded-lg bg-brand-surface text-white/40 hover:text-brand-primary transition-colors">
+          <button className="p-2 rounded-lg bg-brand-surface text-text-muted/40 hover:text-brand-primary transition-colors">
             <Copy size={18} />
           </button>
-          <button className="p-2 rounded-lg bg-brand-surface text-white/40 hover:text-brand-primary transition-colors">
+          <button className="p-2 rounded-lg bg-brand-surface text-text-muted/40 hover:text-brand-primary transition-colors">
             <Share2 size={18} />
           </button>
         </div>
@@ -708,12 +708,12 @@ function QuranView({ onBack }: { onBack: () => void }) {
       <div className="flex items-center justify-between">
         <button 
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5"
+          className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border"
         >
           <ArrowRight size={18} />
         </button>
         <h2 className="text-xl font-bold text-text-main">المصحف الشريف</h2>
-        <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5">
+        <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
           <Bell size={18} />
         </button>
       </div>
@@ -723,7 +723,7 @@ function QuranView({ onBack }: { onBack: () => void }) {
         <input 
           type="text" 
           placeholder="ابحث عن سورة، آية أو جزء" 
-          className="w-full bg-brand-card/40 border border-white/5 rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
+          className="w-full bg-brand-card/40 border border-brand-border rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
         />
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary" />
       </div>
@@ -748,12 +748,12 @@ function QuranView({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-white/5 px-2">
+      <div className="flex items-center justify-between border-b border-brand-border px-2">
         <button 
           onClick={() => setActiveTab("surahs")}
           className={cn(
             "pb-3 text-xs font-bold transition-all relative",
-            activeTab === "surahs" ? "text-brand-primary" : "text-white/40"
+            activeTab === "surahs" ? "text-brand-primary" : "text-text-muted/40"
           )}
         >
           السور
@@ -763,7 +763,7 @@ function QuranView({ onBack }: { onBack: () => void }) {
           onClick={() => setActiveTab("juz")}
           className={cn(
             "pb-3 text-xs font-bold transition-all relative",
-            activeTab === "juz" ? "text-brand-primary" : "text-white/40"
+            activeTab === "juz" ? "text-brand-primary" : "text-text-muted/40"
           )}
         >
           الأجزاء
@@ -773,7 +773,7 @@ function QuranView({ onBack }: { onBack: () => void }) {
           onClick={() => setActiveTab("bookmarks")}
           className={cn(
             "pb-3 text-xs font-bold transition-all relative",
-            activeTab === "bookmarks" ? "text-brand-primary" : "text-white/40"
+            activeTab === "bookmarks" ? "text-brand-primary" : "text-text-muted/40"
           )}
         >
           العلامات المرجعية
@@ -861,7 +861,7 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
       className="flex flex-col h-full bg-brand-dark text-text-main overflow-hidden"
     >
       {/* Header */}
-      <header className="p-4 flex items-center justify-between border-b border-white/5 z-20 bg-brand-dark/80 backdrop-blur-md sticky top-0">
+      <header className="p-4 flex items-center justify-between border-b border-brand-border z-20 bg-brand-dark/80 backdrop-blur-md sticky top-0">
         <button onClick={onBack} className="text-text-muted/60 hover:text-brand-primary transition-colors">
           <ArrowRight size={22} />
         </button>
@@ -1215,12 +1215,12 @@ function CalendarView({ onBack }: { onBack: () => void }) {
       <div className="flex items-center justify-between">
         <button 
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5"
+          className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border"
         >
           <ArrowRight size={18} />
         </button>
         <h2 className="text-xl font-bold text-text-main">التقويم الهجري</h2>
-        <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5">
+        <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
           <Share2 size={18} />
         </button>
       </div>
@@ -1228,15 +1228,15 @@ function CalendarView({ onBack }: { onBack: () => void }) {
       {/* Month Selector */}
       <div className="flex flex-col items-center gap-1">
         <div className="flex items-center gap-8">
-          <button className="text-white/40 hover:text-brand-primary transition-colors">
+          <button className="text-text-muted/40 hover:text-brand-primary transition-colors">
             <ChevronRight size={20} />
           </button>
           <h3 className="text-2xl font-bold text-brand-primary">ذو الحجة 1445 هـ</h3>
-          <button className="text-white/40 hover:text-brand-primary transition-colors">
+          <button className="text-text-muted/40 hover:text-brand-primary transition-colors">
             <ChevronLeft size={20} />
           </button>
         </div>
-        <p className="text-[10px] text-white/40 font-medium">يونيو - يوليو 2024 م</p>
+        <p className="text-[10px] text-text-muted/40 font-medium">يونيو - يوليو 2024 م</p>
       </div>
 
       {/* Calendar Grid */}
@@ -1258,11 +1258,11 @@ function CalendarView({ onBack }: { onBack: () => void }) {
             <div key={day.h} className="flex flex-col items-center gap-1 relative">
               <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                day.active ? "bg-brand-primary text-brand-dark shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]" : "text-white"
+                day.active ? "bg-brand-primary text-brand-dark shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]" : "bg-brand-surface border border-brand-border text-text-main"
               )}>
                 <span className="text-sm font-bold">{day.h}</span>
               </div>
-              <span className={cn("text-[8px] font-medium", day.active ? "text-brand-primary" : "text-white/20")}>{day.g}</span>
+              <span className={cn("text-[8px] font-medium", day.active ? "text-brand-primary" : "text-text-muted/20")}>{day.g}</span>
             </div>
           ))}
         </div>
@@ -1279,8 +1279,8 @@ function CalendarView({ onBack }: { onBack: () => void }) {
                   {event.icon}
                 </div>
                 <div className="text-right">
-                  <h4 className="text-xs font-bold text-white mb-0.5">{event.title}</h4>
-                  <p className="text-[9px] text-white/40">{event.date}</p>
+                  <h4 className="text-xs font-bold text-text-main mb-0.5">{event.title}</h4>
+                  <p className="text-[9px] text-text-muted">{event.date}</p>
                 </div>
               </div>
               <span className="text-[9px] font-bold text-brand-primary">{event.daysLeft}</span>
@@ -1294,7 +1294,7 @@ function CalendarView({ onBack }: { onBack: () => void }) {
 
 function SplashScreen({ progress }: { progress: number }) {
   return (
-    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-[#041c14] overflow-hidden relative shadow-2xl items-center justify-between py-16" dir="rtl">
+    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl items-center justify-between py-16" dir="rtl">
       {/* Aesthetic Background Touches */}
       <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]" />
@@ -1307,7 +1307,7 @@ function SplashScreen({ progress }: { progress: number }) {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center space-y-4"
         >
-          <div className="flex items-center justify-center gap-3 text-white">
+          <div className="flex items-center justify-center gap-3 text-text-main">
             <motion.div
               animate={{ 
                 rotate: [0, 5, 0, -5, 0],
@@ -1343,7 +1343,7 @@ function SplashScreen({ progress }: { progress: number }) {
         >
           <div className="flex justify-between items-center text-[10px] font-bold">
             <span className="text-brand-primary">{progress}%</span>
-            <span className="text-white/40">جاري التحميل...</span>
+            <span className="text-text-muted/40">جاري التحميل...</span>
           </div>
           <div className="w-full h-1 bg-brand-hover rounded-full overflow-hidden">
             <motion.div 
