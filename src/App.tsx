@@ -805,15 +805,15 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
     const fetchSurah = async () => {
       try {
         setLoading(true);
-        // Fetch both Uthmani text and Muyassar Tafsir
-        const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}/editions/quran-uthmani,ar.muyassar`);
+        // Fetch both Simple text and Muyassar Tafsir
+        const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}/editions/quran-simple,ar.muyassar`);
         const data = await response.json();
         
         if (data.code === 200) {
-          const uthmaniAyahs = data.data[0].ayahs;
+          const simpleAyahs = data.data[0].ayahs;
           const tafsirAyahs = data.data[1].ayahs;
           
-          const combined = uthmaniAyahs.map((ayah: any, index: number) => ({
+          const combined = simpleAyahs.map((ayah: any, index: number) => ({
             ...ayah,
             tafsir: tafsirAyahs[index].text
           }));
@@ -871,7 +871,7 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
               // Remove Basmala from the first ayah of all surahs except Al-Fatiha
               if (surahId !== 1 && ayah.numberInSurah === 1) {
                 // Use a more inclusive regex that handles both standard Alef and Alef Wasla (ٱ)
-                // This targets the specific Uthmani Basmala pattern returned by the API
+                // This targets the specific Basmala pattern returned by the API
                 const basmalaRegex = /^بِسْمِ\s+[\u0600-\u06FF\s]*?[ٱا]لرَّحِيمِ\s*/;
                 text = text.replace(basmalaRegex, "").trim();
               }
