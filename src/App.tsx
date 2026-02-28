@@ -64,20 +64,44 @@ export default function App() {
   // Global Settings
   const [primaryColor, setPrimaryColor] = useState("#0bda84");
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [fontSize, setFontSize] = useState(16);
 
   useEffect(() => {
     // Apply primary color globally
     document.documentElement.style.setProperty('--color-brand-primary', primaryColor);
-    // Apply text scale globally (base is 16px)
-    document.documentElement.style.setProperty('--text-scale', (fontSize / 16).toString());
+    // Create a slightly darker version for the gradient secondary color
+    const darken = (hex: string, amount: number) => {
+      const num = parseInt(hex.slice(1), 16);
+      let r = (num >> 16) - amount;
+      let g = ((num >> 8) & 0x00FF) - amount;
+      let b = (num & 0x0000FF) - amount;
+      
+      r = r < 0 ? 0 : r;
+      g = g < 0 ? 0 : g;
+      b = b < 0 ? 0 : b;
+      
+      return `#${(b | (g << 8) | (r << 16)).toString(16).padStart(6, '0')}`;
+    };
+    
+    const secondaryColor = primaryColor.startsWith('#') ? darken(primaryColor, 20) : primaryColor;
+    document.documentElement.style.setProperty('--secondary', secondaryColor);
+    document.documentElement.style.setProperty('--primary', primaryColor);
+    
+    // Set RGB components for dynamic shadows
+    if (primaryColor.startsWith('#')) {
+      const num = parseInt(primaryColor.slice(1), 16);
+      const r = (num >> 16);
+      const g = ((num >> 8) & 0x00FF);
+      const b = (num & 0x0000FF);
+      document.documentElement.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`);
+    }
+
     // Apply dark mode
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [primaryColor, fontSize, isDarkMode]);
+  }, [primaryColor, isDarkMode]);
 
   useEffect(() => {
     const coords = new Coordinates(55.7558, 37.6173);
@@ -240,7 +264,7 @@ export default function App() {
               className="space-y-4"
             >
               {/* Prayer Card */}
-              <div className="prayer-gradient p-5 rounded-[28px] shadow-lg shadow-brand-primary/10 relative overflow-hidden">
+              <div className="prayer-gradient p-5 rounded-[28px] shadow-xl shadow-[rgba(var(--primary-rgb),0.2)] relative overflow-hidden">
                 <div className="flex justify-between items-center">
                   <div className="text-left">
                     <h3 className="text-2xl font-bold text-white">
@@ -360,11 +384,10 @@ export default function App() {
           {activeView === "settings" && (
             <SettingsView 
               onBack={() => setActiveView("home")} 
-              settings={{ primaryColor, isDarkMode, fontSize }}
+              settings={{ primaryColor, isDarkMode }}
               onUpdate={(key, value) => {
                 if (key === 'primaryColor') setPrimaryColor(value as string);
                 if (key === 'isDarkMode') setIsDarkMode(value as boolean);
-                if (key === 'fontSize') setFontSize(value as number);
               }}
             />
           )}
@@ -947,7 +970,7 @@ function SettingsView({
   onUpdate 
 }: { 
   onBack: () => void, 
-  settings: { primaryColor: string, isDarkMode: boolean, fontSize: number },
+  settings: { primaryColor: string, isDarkMode: boolean },
   onUpdate: (key: string, value: string | boolean | number) => void
 }) {
   const colors = [
@@ -966,10 +989,12 @@ function SettingsView({
       className="flex flex-col h-full"
     >
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-brand-dark border-b border-white/5 p-4 flex items-center justify-between">
+      <header className="sticky top-0 z-10 bg-brand-dark/80 backdrop-blur-md p-4 flex items-center justify-between border-b border-white/5">
         <div className="flex items-center gap-2">
-          <Leaf size={28} className="text-brand-primary" />
-          <h1 className="text-xl font-bold text-brand-primary">طُمأنينة</h1>
+          <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+            <Settings size={18} />
+          </div>
+          <h1 className="text-lg font-bold text-text-main">الإعدادات</h1>
         </div>
         <button 
           onClick={onBack}
@@ -980,132 +1005,100 @@ function SettingsView({
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto pb-24 px-6">
-        {/* Title */}
-        <div className="pt-8 pb-4">
-          <h2 className="text-2xl font-bold text-text-main">الإعدادات</h2>
-          <p className="text-text-muted text-sm mt-1">قم بتخصيص تجربة تطبيق طُمأنينة الخاصة بك</p>
-        </div>
-
+      <div className="flex-1 overflow-y-auto pb-24 px-6 space-y-8 pt-6">
         {/* Appearance Section */}
-        <section className="mt-6">
-          <div className="mb-3">
-            <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
-              <Palette size={20} className="text-brand-primary" />
-              المظهر
-            </h3>
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1.5 h-4 bg-brand-primary rounded-full" />
+            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">تخصيص المظهر</h3>
           </div>
-          <div className="p-4 rounded-xl bg-brand-surface border border-brand-border space-y-6">
-            {/* Color Swatches */}
-            <div>
-              <p className="text-sm mb-3 text-text-muted">لون التطبيق الأساسي</p>
+          
+          <div className="grid gap-4">
+            {/* Color Swatches Card */}
+            <div className="p-5 rounded-3xl bg-brand-surface border border-brand-border">
+              <div className="flex items-center gap-3 mb-5">
+                <Palette size={18} className="text-brand-primary" />
+                <span className="text-sm font-bold text-text-main">لون التطبيق</span>
+              </div>
               <div className="flex flex-wrap gap-4">
                 {colors.map((color) => (
                   <button
                     key={color.name}
                     onClick={() => onUpdate('primaryColor', color.value)}
                     className={cn(
-                      "w-10 h-10 rounded-full transition-all relative ring-offset-2 ring-offset-brand-dark",
-                      settings.primaryColor === color.value && "ring-2 ring-brand-primary"
+                      "w-12 h-12 rounded-2xl transition-all relative flex items-center justify-center",
+                      settings.primaryColor === color.value ? "ring-2 ring-brand-primary ring-offset-4 ring-offset-brand-dark scale-110 shadow-lg" : "hover:scale-105"
                     )}
                     style={{ backgroundColor: color.value }}
-                  />
+                  >
+                    {settings.primaryColor === color.value && <div className="w-2 h-2 bg-white rounded-full shadow-sm" />}
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Dark Mode Toggle */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Moon size={20} />
+            {/* Dark Mode Card */}
+            <button 
+              onClick={() => onUpdate('isDarkMode', !settings.isDarkMode)}
+              className="p-5 rounded-3xl bg-brand-surface border border-brand-border flex items-center justify-between group hover:border-brand-primary/30 transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary group-hover:scale-110 transition-transform">
+                  {settings.isDarkMode ? <Moon size={22} /> : <Sun size={22} />}
                 </div>
-                <span className="font-medium text-text-main">الوضع الليلي</span>
-              </div>
-              <button 
-                onClick={() => onUpdate('isDarkMode', !settings.isDarkMode)}
-                className={cn(
-                  "w-11 h-6 rounded-full relative transition-colors",
-                  settings.isDarkMode ? "bg-brand-primary" : "bg-white/10"
-                )}
-              >
-                <div className={cn(
-                  "absolute top-1 w-4 h-4 rounded-full bg-white transition-all",
-                  settings.isDarkMode ? "left-6" : "left-1"
-                )} />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Preferences Section */}
-        <section className="mt-8">
-          <div className="mb-3">
-            <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
-              <Settings size={20} className="text-brand-primary" />
-              التفضيلات العامة
-            </h3>
-          </div>
-          <div className="rounded-xl bg-brand-surface border border-white/5 divide-y divide-white/5">
-            {/* Font Size */}
-            <div className="p-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Type size={20} />
+                <div className="text-right">
+                  <span className="block text-sm font-bold text-text-main">الوضع الليلي</span>
+                  <span className="text-[10px] text-text-muted">تغيير مظهر التطبيق</span>
                 </div>
-                <span className="font-medium text-text-main">حجم الخط</span>
               </div>
-              <div className="px-2">
-                <input 
-                  type="range" 
-                  min="12" 
-                  max="24" 
-                  value={settings.fontSize}
-                  onChange={(e) => onUpdate('fontSize', parseInt(e.target.value))}
-                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand-primary"
+              <div className={cn(
+                "w-12 h-6 rounded-full relative transition-colors p-1",
+                settings.isDarkMode ? "bg-brand-primary" : "bg-white/10"
+              )}>
+                <motion.div 
+                  animate={{ x: settings.isDarkMode ? -24 : 0 }}
+                  className="w-4 h-4 rounded-full bg-white shadow-sm" 
                 />
-                <div className="flex justify-between mt-2 text-xs text-text-muted">
-                  <span>صغير</span>
-                  <span>متوسط</span>
-                  <span>كبير</span>
-                </div>
               </div>
-            </div>
-
-            {/* Language Selection */}
-            <div className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Globe size={20} />
-                </div>
-                <span className="font-medium text-text-main">اللغة</span>
-              </div>
-              <select className="bg-transparent border-none text-brand-primary font-medium focus:ring-0 cursor-pointer text-sm outline-none">
-                <option value="ar">العربية</option>
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-              </select>
-            </div>
-
-            {/* Notifications */}
-            <button className="w-full p-4 flex items-center justify-between hover:bg-brand-hover transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Bell size={20} />
-                </div>
-                <span className="font-medium text-text-main">التنبيهات</span>
-              </div>
-              <ChevronLeft size={20} className="text-text-muted/20" />
             </button>
           </div>
         </section>
 
-        {/* Account Section */}
-        <section className="mt-8">
-          <button className="w-full p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center gap-2 font-bold transition-colors hover:bg-red-500/20">
-            <LogOut size={20} />
-            تسجيل الخروج
-          </button>
+        {/* Preferences Section */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1.5 h-4 bg-brand-primary rounded-full" />
+            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider">تفضيلات اللغة</h3>
+          </div>
+          
+          <div className="p-5 rounded-3xl bg-brand-surface border border-brand-border flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <Globe size={22} />
+              </div>
+              <div className="text-right">
+                <span className="block text-sm font-bold text-text-main">لغة التطبيق</span>
+                <span className="text-[10px] text-text-muted">اختر لغتك المفضلة</span>
+              </div>
+            </div>
+            <select className="bg-brand-dark/40 border border-white/5 rounded-xl px-4 py-2 text-brand-primary font-bold text-xs outline-none focus:border-brand-primary/30 transition-colors cursor-pointer">
+              <option value="ar">العربية</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
+        </section>
+
+        {/* Info Section */}
+        <section className="pt-4">
+          <div className="p-6 rounded-3xl bg-brand-primary/5 border border-brand-primary/10 text-center">
+            <Leaf size={32} className="text-brand-primary mx-auto mb-3 opacity-50" />
+            <h4 className="text-sm font-bold text-text-main mb-1">طُمأنينة</h4>
+            <p className="text-[10px] text-text-muted leading-relaxed">
+              تطبيق إسلامي متكامل يهدف إلى توفير تجربة روحانية هادئة ومميزة للمستخدم المسلم في حياته اليومية.
+            </p>
+            <p className="text-[9px] text-brand-primary/40 mt-4 font-mono">الإصدار 1.0.0</p>
+          </div>
         </section>
       </div>
     </motion.div>
@@ -1154,7 +1147,7 @@ function SubhaView({ onBack }: { onBack: () => void }) {
         {/* Tap Button */}
         <button 
           onClick={handleTap}
-          className="relative w-48 h-48 rounded-full bg-brand-primary flex flex-col items-center justify-center text-brand-dark shadow-[0_0_40px_rgba(0,210,147,0.3)] active:scale-95 transition-all group"
+          className="relative w-48 h-48 rounded-full bg-brand-primary flex flex-col items-center justify-center text-brand-dark shadow-[0_0_40px_rgba(var(--primary-rgb),0.3)] active:scale-95 transition-all group"
         >
           <div className="absolute inset-0 rounded-full border-4 border-white/10 scale-105 group-active:scale-100 transition-transform" />
           <Fingerprint size={48} strokeWidth={1.5} />
@@ -1265,7 +1258,7 @@ function CalendarView({ onBack }: { onBack: () => void }) {
             <div key={day.h} className="flex flex-col items-center gap-1 relative">
               <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                day.active ? "bg-brand-primary text-brand-dark shadow-[0_0_15px_rgba(11,218,132,0.4)]" : "text-white"
+                day.active ? "bg-brand-primary text-brand-dark shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]" : "text-white"
               )}>
                 <span className="text-sm font-bold">{day.h}</span>
               </div>
@@ -1354,7 +1347,7 @@ function SplashScreen({ progress }: { progress: number }) {
           </div>
           <div className="w-full h-1 bg-brand-hover rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(0,210,147,0.5)]"
+              className="h-full bg-brand-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.1 }}
