@@ -1,11 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-dark: #050c0a;
-  --color-brand-primary: #00d293;
-  --color-brand-secondary: #064e3b;
-  --color-brand-surface: #0d1a16;
-  --color-brand-card: #12231e;
+  --color-brand-dark: var(--bg-dark);
+  --color-brand-primary: var(--primary);
+  --color-brand-secondary: var(--secondary);
+  --color-brand-surface: var(--surface);
+  --color-brand-card: var(--card);
+  --color-brand-border: var(--border-color);
+  --color-brand-hover: var(--hover-bg);
+  --color-text-main: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
   
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
@@ -21,15 +25,43 @@
   --font-size-9xl: calc(8rem * var(--text-scale, 1));
 }
 
+:root {
+  --primary: #00d293;
+  --secondary: #00b37e;
+  --bg-dark: #fdfdfb;
+  --surface: #f5f5f0;
+  --card: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --border-color: rgba(0, 0, 0, 0.05);
+  --hover-bg: rgba(0, 0, 0, 0.03);
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.dark {
+  --bg-dark: #050c0a;
+  --surface: #0d1a16;
+  --card: #12231e;
+  --secondary: #064e3b;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --border-color: rgba(255, 255, 255, 0.05);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
 @layer base {
   body {
-    @apply bg-brand-dark text-white font-sans antialiased;
+    @apply bg-brand-dark text-text-main font-sans antialiased;
     direction: rtl;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 .glass-card {
-  @apply bg-brand-card/60 backdrop-blur-md border border-white/5 rounded-3xl;
+  @apply bg-brand-card/60 backdrop-blur-md border rounded-3xl transition-all;
+  border-color: var(--border-color);
+  box-shadow: var(--card-shadow);
 }
 
 .dashed-card {
@@ -37,7 +69,7 @@
 }
 
 .prayer-gradient {
-  background: linear-gradient(135deg, var(--color-brand-primary) 0%, color-mix(in srgb, var(--color-brand-primary), black 30%) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
 }
 
 .active-nav {

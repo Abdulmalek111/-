@@ -51,6 +51,8 @@ type View = "home" | "dhikr" | "subha" | "settings" | "qibla" | "quran" | "calen
 
 export default function App() {
   const [activeView, setActiveView] = useState<View>("home");
+  const [showSplash, setShowSplash] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null);
   const [nextPrayer, setNextPrayer] = useState<string>("");
   const [timeToNext, setTimeToNext] = useState<string>("");
@@ -100,6 +102,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (showSplash) {
+      const interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setTimeout(() => setShowSplash(false), 800);
+            return 100;
+          }
+          // Random increment to make it feel more natural
+          const inc = Math.floor(Math.random() * 5) + 2;
+          return Math.min(prev + inc, 100);
+        });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [showSplash]);
+
   const getPrayerNameArabic = (p: string) => {
     const names: Record<string, string> = {
       fajr: "صلاة الفجر",
@@ -118,8 +138,12 @@ export default function App() {
     return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
+  if (showSplash) {
+    return <SplashScreen progress={loadingProgress} />;
+  }
+
   return (
-    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl border-x border-white/5" dir="rtl">
+    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl border-x border-brand-border" dir="rtl">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-3">
         <div className="flex items-center gap-2 text-brand-primary">
@@ -127,7 +151,7 @@ export default function App() {
           <h1 className="text-base font-bold">طُمأنينة</h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5">
+          <div className="w-8 h-8 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
             <Bell size={16} />
           </div>
         </div>
@@ -193,7 +217,7 @@ export default function App() {
 
               {/* Main Sections Header */}
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white">الأقسام الرئيسية</h3>
+        <h3 className="text-sm font-bold text-text-main">الأقسام الرئيسية</h3>
                 <button className="text-[10px] text-brand-primary font-medium">عرض الكل</button>
               </div>
 
@@ -270,7 +294,7 @@ export default function App() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-[400px] mx-auto bg-brand-surface/90 backdrop-blur-xl border-t border-white/5 px-6 py-3 flex justify-between items-center z-50">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-[400px] mx-auto bg-brand-surface/90 backdrop-blur-xl border-t border-brand-border px-6 py-3 flex justify-between items-center z-50">
         <NavButton active={activeView === "home"} icon={<Home size={22} />} label="الرئيسية" onClick={() => setActiveView("home")} />
         <NavButton active={activeView === "dhikr"} icon={<BookOpen size={22} />} label="الأذكار" onClick={() => setActiveView("dhikr")} />
         <NavButton active={activeView === "subha"} icon={<Fingerprint size={22} />} label="المسبحة" onClick={() => setActiveView("subha")} />
@@ -290,7 +314,7 @@ function SectionButton({ icon, title, subtitle, onClick }: { icon: React.ReactNo
         {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 20 }) : icon}
       </div>
       <h4 className="font-bold text-xs mb-0.5">{title}</h4>
-      <p className="text-[9px] text-white/40">{subtitle}</p>
+      <p className="text-[9px] text-text-muted">{subtitle}</p>
     </button>
   );
 }
@@ -298,10 +322,10 @@ function SectionButton({ icon, title, subtitle, onClick }: { icon: React.ReactNo
 function ServiceIcon({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick?: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1.5 group">
-      <div className="w-12 h-12 rounded-xl bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5 group-hover:border-brand-primary/30 transition-all active:scale-90">
+      <div className="w-12 h-12 rounded-xl bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border group-hover:border-brand-primary/30 transition-all active:scale-90">
         {icon}
       </div>
-      <span className="text-[9px] text-white/60 group-hover:text-white transition-colors">{label}</span>
+      <span className="text-[9px] text-text-muted group-hover:text-text-main transition-colors">{label}</span>
     </button>
   );
 }
@@ -312,7 +336,7 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
       onClick={onClick}
       className={cn(
         "flex flex-col items-center gap-1.5 transition-all active:scale-90",
-        active ? "text-brand-primary" : "text-white/30"
+        active ? "text-brand-primary" : "text-text-muted/40"
       )}
     >
       {icon}
@@ -346,7 +370,7 @@ function DhikrView({ onBack }: { onBack: () => void }) {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-white">جميع الأذكار</h2>
+          <h2 className="text-xl font-bold text-text-main">جميع الأذكار</h2>
           <button onClick={onBack} className="w-9 h-9 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary">
             <ArrowRight size={20} />
           </button>
@@ -435,7 +459,7 @@ function DhikrImageCard({ title, image, onClick }: { title: string, image: strin
       <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/80 to-transparent" />
       <div className="absolute bottom-4 right-4 text-right">
         <span className="bg-brand-primary/20 text-brand-primary text-[8px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">يومي</span>
-        <h4 className="text-white font-bold text-sm">{title}</h4>
+        <h4 className="text-text-main font-bold text-sm">{title}</h4>
       </div>
     </button>
   );
@@ -448,10 +472,10 @@ function DhikrListItem({ icon, title, subtitle }: { icon: React.ReactNode, title
         {icon}
       </div>
       <div className="flex-1 text-right px-4">
-        <h4 className="text-white font-bold text-sm mb-0.5">{title}</h4>
-        <p className="text-[10px] text-white/40">{subtitle}</p>
+        <h4 className="text-text-main font-bold text-sm mb-0.5">{title}</h4>
+        <p className="text-[10px] text-text-muted">{subtitle}</p>
       </div>
-      <ChevronLeft size={14} className="text-white/20" />
+      <ChevronLeft size={14} className="text-text-muted/20" />
     </button>
   );
 }
@@ -462,7 +486,7 @@ function CategorySmallCard({ icon, title }: { icon: React.ReactNode, title: stri
       <div className="text-brand-primary group-hover:scale-110 transition-transform">
         {icon}
       </div>
-      <span className="text-xs font-bold text-white/80">{title}</span>
+      <span className="text-xs font-bold text-text-main/80">{title}</span>
     </button>
   );
 }
@@ -527,7 +551,7 @@ function DhikrDetailView({ category, onBack }: { category: string, onBack: () =>
       <div className="flex items-center justify-between mb-4">
         <div className="w-10" />
         <h2 className="text-lg font-bold">{title}</h2>
-        <button onClick={onBack} className="p-2 rounded-full bg-brand-surface text-white/60">
+        <button onClick={onBack} className="p-2 rounded-full bg-brand-surface text-text-muted/60">
           <ArrowRight size={20} />
         </button>
       </div>
@@ -587,7 +611,7 @@ function QuranView({ onBack }: { onBack: () => void }) {
         >
           <ArrowRight size={18} />
         </button>
-        <h2 className="text-xl font-bold text-white">المصحف الشريف</h2>
+        <h2 className="text-xl font-bold text-text-main">المصحف الشريف</h2>
         <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5">
           <Bell size={18} />
         </button>
@@ -604,14 +628,14 @@ function QuranView({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Last Read Card */}
-      <div className="relative overflow-hidden bg-[#0a2a1e] rounded-3xl p-6 border border-white/5">
+      <div className="relative overflow-hidden bg-brand-surface rounded-3xl p-6 border border-brand-border">
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-brand-primary mb-4">
             <BookOpen size={14} />
             <span className="text-[10px] font-bold">آخر قراءة</span>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-1">سورة البقرة</h3>
-          <p className="text-[10px] text-white/60 mb-6">آية رقم: 155 • الجزء 2</p>
+          <h3 className="text-2xl font-bold text-text-main mb-1">سورة البقرة</h3>
+          <p className="text-[10px] text-text-muted mb-6">آية رقم: 155 • الجزء 2</p>
           <button className="bg-brand-primary text-brand-dark px-6 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 active:scale-95 transition-all">
             <span>متابعة القراءة</span>
             <ArrowRight size={14} className="rotate-180" />
@@ -662,7 +686,7 @@ function QuranView({ onBack }: { onBack: () => void }) {
           <button 
             key={surah.id} 
             onClick={() => setSelectedSurahId(surah.id)}
-            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors group border-b border-white/5 last:border-0"
+            className="w-full flex items-center justify-between p-4 hover:bg-brand-hover transition-colors group border-b border-brand-border last:border-0"
           >
             <div className="flex items-center gap-4">
               <div className="relative w-10 h-10 flex items-center justify-center">
@@ -674,13 +698,13 @@ function QuranView({ onBack }: { onBack: () => void }) {
                 <span className="relative text-[10px] font-bold text-brand-primary">{surah.id}</span>
               </div>
               <div className="text-left">
-                <h4 className="text-sm font-bold text-white mb-0.5">{surah.name}</h4>
-                <p className="text-[9px] text-white/40 uppercase tracking-wider">
+                <h4 className="text-sm font-bold text-text-main mb-0.5">{surah.name}</h4>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider">
                   {surah.type === "MECCAN" ? "مكية" : "مدنية"} • {surah.verses} آية
                 </p>
               </div>
             </div>
-            <ChevronLeft size={16} className="text-white/20" />
+            <ChevronLeft size={16} className="text-text-muted/20" />
           </button>
         ))}
       </div>
@@ -756,11 +780,11 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex flex-col h-full bg-[#050f0c] text-white overflow-hidden"
+      className="flex flex-col h-full bg-brand-dark text-text-main overflow-hidden"
     >
       {/* Header */}
       <header className="p-3 flex items-center justify-between border-b border-white/5 z-20">
-        <button onClick={onBack} className="text-white/60">
+        <button onClick={onBack} className="text-text-muted/60">
           <ArrowRight size={20} />
         </button>
         <div className="text-center">
@@ -811,13 +835,13 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
                   
                   {/* Basmala centered below Surah Name */}
                   {surahId !== 9 && (
-                    <p className="text-3xl font-serif text-white/90">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                    <p className="text-3xl font-serif text-text-main/90">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
                   )}
                 </div>
               )}
 
               {/* Verses Grid/Flow - Reduced font size and line height to fit without scrolling */}
-              <div className="text-center leading-[2.2] text-lg font-medium text-white/90 space-x-reverse space-x-1 overflow-hidden">
+              <div className="text-center leading-[2.2] text-lg font-medium text-text-main/90 space-x-reverse space-x-1 overflow-hidden">
                 {currentAyahs.map((ayah, index) => {
                   let text = ayah.text;
                   // Remove Basmala from the text if present (it's often prefixed in the first ayah)
@@ -857,7 +881,7 @@ function SurahDetailView({ surahId, surahName, onBack, onNextSurah, onPrevSurah 
 
       {/* Navigation Hints */}
       {!loading && pageNumbers.length > 0 && (
-        <div className="p-3 flex justify-between items-center text-[9px] font-bold text-white/20 uppercase tracking-widest border-t border-white/5">
+        <div className="p-3 flex justify-between items-center text-[9px] font-bold text-text-muted/20 uppercase tracking-widest border-t border-brand-border">
           <button 
             onClick={handlePrevPage} 
             disabled={currentPageIndex === 0 && !onPrevSurah}
@@ -917,7 +941,7 @@ function SettingsView({
         </div>
         <button 
           onClick={onBack}
-          className="p-2 rounded-full hover:bg-white/5 transition-colors text-white/60"
+          className="p-2 rounded-full hover:bg-brand-hover transition-colors text-text-muted"
         >
           <ArrowRight size={24} />
         </button>
@@ -927,8 +951,8 @@ function SettingsView({
       <div className="flex-1 overflow-y-auto pb-24 px-6">
         {/* Title */}
         <div className="pt-8 pb-4">
-          <h2 className="text-2xl font-bold text-white">الإعدادات</h2>
-          <p className="text-white/40 text-sm mt-1">قم بتخصيص تجربة تطبيق طُمأنينة الخاصة بك</p>
+          <h2 className="text-2xl font-bold text-text-main">الإعدادات</h2>
+          <p className="text-text-muted text-sm mt-1">قم بتخصيص تجربة تطبيق طُمأنينة الخاصة بك</p>
         </div>
 
         {/* Appearance Section */}
@@ -939,10 +963,10 @@ function SettingsView({
               المظهر
             </h3>
           </div>
-          <div className="p-4 rounded-xl bg-brand-surface border border-white/5 space-y-6">
+          <div className="p-4 rounded-xl bg-brand-surface border border-brand-border space-y-6">
             {/* Color Swatches */}
             <div>
-              <p className="text-sm mb-3 text-white/60">لون التطبيق الأساسي</p>
+              <p className="text-sm mb-3 text-text-muted">لون التطبيق الأساسي</p>
               <div className="flex flex-wrap gap-4">
                 {colors.map((color) => (
                   <button
@@ -964,7 +988,7 @@ function SettingsView({
                 <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
                   <Moon size={20} />
                 </div>
-                <span className="font-medium text-white">الوضع الليلي</span>
+                <span className="font-medium text-text-main">الوضع الليلي</span>
               </div>
               <button 
                 onClick={() => onUpdate('isDarkMode', !settings.isDarkMode)}
@@ -997,7 +1021,7 @@ function SettingsView({
                 <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
                   <Type size={20} />
                 </div>
-                <span className="font-medium text-white">حجم الخط</span>
+                <span className="font-medium text-text-main">حجم الخط</span>
               </div>
               <div className="px-2">
                 <input 
@@ -1008,7 +1032,7 @@ function SettingsView({
                   onChange={(e) => onUpdate('fontSize', parseInt(e.target.value))}
                   className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                 />
-                <div className="flex justify-between mt-2 text-xs text-white/40">
+                <div className="flex justify-between mt-2 text-xs text-text-muted">
                   <span>صغير</span>
                   <span>متوسط</span>
                   <span>كبير</span>
@@ -1022,7 +1046,7 @@ function SettingsView({
                 <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
                   <Globe size={20} />
                 </div>
-                <span className="font-medium text-white">اللغة</span>
+                <span className="font-medium text-text-main">اللغة</span>
               </div>
               <select className="bg-transparent border-none text-brand-primary font-medium focus:ring-0 cursor-pointer text-sm outline-none">
                 <option value="ar">العربية</option>
@@ -1032,14 +1056,14 @@ function SettingsView({
             </div>
 
             {/* Notifications */}
-            <button className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-brand-hover transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
                   <Bell size={20} />
                 </div>
-                <span className="font-medium text-white">التنبيهات</span>
+                <span className="font-medium text-text-main">التنبيهات</span>
               </div>
-              <ChevronLeft size={20} className="text-white/20" />
+              <ChevronLeft size={20} className="text-text-muted/20" />
             </button>
           </div>
         </section>
@@ -1082,7 +1106,7 @@ function SubhaView({ onBack }: { onBack: () => void }) {
         <button onClick={handleReset} className="text-brand-primary">
           <RotateCcw size={22} />
         </button>
-        <h2 className="text-lg font-bold text-white">المسبحة الرقمية</h2>
+        <h2 className="text-lg font-bold text-text-main">المسبحة الرقمية</h2>
         <button onClick={onBack} className="text-brand-primary">
           <Menu size={22} />
         </button>
@@ -1092,7 +1116,7 @@ function SubhaView({ onBack }: { onBack: () => void }) {
         {/* Counter Section */}
         <div className="text-center space-y-1">
           <p className="text-[10px] text-brand-primary font-medium">الجلسة الحالية</p>
-          <h3 className="text-7xl font-bold text-white tracking-tighter">{count}</h3>
+          <h3 className="text-7xl font-bold text-text-main tracking-tighter">{count}</h3>
         </div>
 
         {/* Tap Button */}
@@ -1111,7 +1135,7 @@ function SubhaView({ onBack }: { onBack: () => void }) {
             onClick={() => setIsVibrate(!isVibrate)}
             className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90",
-              isVibrate ? "bg-brand-primary/20 text-brand-primary" : "bg-brand-surface text-white/20"
+              isVibrate ? "bg-brand-primary/20 text-brand-primary" : "bg-brand-surface text-text-muted/20"
             )}
           >
             <Vibrate size={20} />
@@ -1120,7 +1144,7 @@ function SubhaView({ onBack }: { onBack: () => void }) {
             onClick={() => setIsSound(!isSound)}
             className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90",
-              isSound ? "bg-brand-primary/20 text-brand-primary" : "bg-brand-surface text-white/20"
+              isSound ? "bg-brand-primary/20 text-brand-primary" : "bg-brand-surface text-text-muted/20"
             )}
           >
             <Volume2 size={20} />
@@ -1143,7 +1167,7 @@ function SubhaControl({ icon, label, onClick }: { icon: React.ReactNode, label: 
       <div className="w-12 h-12 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5 group-hover:border-brand-primary/50 transition-colors">
         {icon}
       </div>
-      <span className="text-[10px] font-bold text-white/40 group-hover:text-brand-primary transition-colors">{label}</span>
+      <span className="text-[10px] font-bold text-text-muted group-hover:text-brand-primary transition-colors">{label}</span>
     </button>
   );
 }
@@ -1170,7 +1194,7 @@ function CalendarView({ onBack }: { onBack: () => void }) {
         >
           <ArrowRight size={18} />
         </button>
-        <h2 className="text-xl font-bold text-white">التقويم الهجري</h2>
+        <h2 className="text-xl font-bold text-text-main">التقويم الهجري</h2>
         <button className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-white/5">
           <Share2 size={18} />
         </button>
@@ -1221,10 +1245,10 @@ function CalendarView({ onBack }: { onBack: () => void }) {
 
       {/* Upcoming Events */}
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-white">المناسبات الإسلامية القادمة</h3>
+                <h3 className="text-sm font-bold text-text-main">المناسبات الإسلامية القادمة</h3>
         <div className="space-y-3">
           {events.map((event, idx) => (
-            <div key={idx} className="glass-card p-4 flex items-center justify-between group hover:bg-white/5 transition-colors">
+            <div key={idx} className="glass-card p-4 flex items-center justify-between group hover:bg-brand-hover transition-colors">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
                   {event.icon}
@@ -1240,5 +1264,43 @@ function CalendarView({ onBack }: { onBack: () => void }) {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function SplashScreen({ progress }: { progress: number }) {
+  return (
+    <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-[#041c14] overflow-hidden relative shadow-2xl items-center justify-between py-16" dir="rtl">
+      <div className="flex-1 flex flex-col items-center justify-center w-full px-10 gap-16">
+        {/* Text */}
+        <div className="text-center space-y-4">
+          <h1 className="text-6xl font-bold text-white tracking-tight">طُمأنينة</h1>
+          <p className="text-brand-primary text-base font-medium opacity-80">مرحباً بك في طُمأنينة</p>
+        </div>
+
+        {/* Loading Bar */}
+        <div className="w-full space-y-4">
+          <div className="flex justify-between items-center text-[10px] font-bold">
+            <span className="text-brand-primary">{progress}%</span>
+            <span className="text-white/40">جاري التحميل...</span>
+          </div>
+          <div className="w-full h-1 bg-brand-hover rounded-full overflow-hidden">
+            <motion.div 
+              className="h-full bg-brand-primary"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.1 }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center gap-2 text-text-muted/20 text-[10px] font-bold tracking-[0.2em] uppercase">
+        <span>SPIRITUALITY & PEACE</span>
+        <div className="w-4 h-4 rounded-full bg-brand-primary/10 flex items-center justify-center">
+          <Sparkles size={8} className="text-brand-primary" />
+        </div>
+      </div>
+    </div>
   );
 }
