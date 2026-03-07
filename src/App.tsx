@@ -146,6 +146,23 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleFindMosques = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const url = `https://www.google.com/maps/search/mosque/@${latitude},${longitude},15z`;
+          window.open(url, '_blank');
+        },
+        () => {
+          window.open('https://www.google.com/maps/search/mosque', '_blank');
+        }
+      );
+    } else {
+      window.open('https://www.google.com/maps/search/mosque', '_blank');
+    }
+  };
+
   const triggerNotification = async () => {
     if (notificationMode === 'silent') return;
 
@@ -377,7 +394,7 @@ export default function App() {
                 <h3 className="font-bold text-sm">{t.extraServices}</h3>
                 <div className="grid grid-cols-3 gap-2">
                   <ServiceIcon icon={<Compass size={18} />} label={t.qibla} onClick={() => setActiveView("qibla")} />
-                  <ServiceIcon icon={<MosqueIcon size={18} />} label={t.mosques} />
+                  <ServiceIcon icon={<MosqueFinderIcon size={18} />} label={t.mosques} onClick={handleFindMosques} />
                   <ServiceIcon icon={<Calendar size={18} />} label={t.calendar} onClick={() => setActiveView("calendar")} />
                 </div>
               </div>
@@ -446,6 +463,23 @@ const MosqueIcon = ({ size = 18 }: { size?: number }) => (
     <path d="M12 7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4" />
     <path d="M12 7a3 3 0 0 1 3-3 3 3 0 0 1 3 3v4" />
     <circle cx="12" cy="3" r="1" />
+  </svg>
+);
+
+const MosqueFinderIcon = ({ size = 18 }: { size?: number }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
+    <path d="M9 10a3 3 0 0 1 6 0" />
+    <path d="M12 7v3" />
   </svg>
 );
 
