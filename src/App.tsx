@@ -1287,6 +1287,7 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
   const [compassHeading, setCompassHeading] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -1310,6 +1311,16 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
         let qibla = Math.atan2(y, x) * (180 / Math.PI);
         qibla = (qibla + 360) % 360;
         setQiblaDirection(qibla);
+
+        // Calculate Distance (Haversine)
+        const R = 6371; // km
+        const dLat = kaabaLat - myLat;
+        const dLon = kaabaLng - myLng;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(myLat) * Math.cos(kaabaLat) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        setDistance(Math.round(R * c));
       },
       (err) => {
         setError(language === 'ar' ? 'فشل الحصول على الموقع' : 'Failed to get location');
@@ -1318,7 +1329,7 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
     );
 
     const handleOrientation = (e: DeviceOrientationEvent) => {
-      // @ts-ignore - webkitCompassHeading is non-standard but widely supported on iOS
+      // @ts-ignore
       const heading = e.webkitCompassHeading || (360 - (e.alpha || 0));
       setCompassHeading(heading);
     };
@@ -1326,6 +1337,12 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
     window.addEventListener('deviceorientation', handleOrientation, true);
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, [language]);
+
+  const isAligned = qiblaDirection !== null && Math.abs((compassHeading + qiblaDirection) % 360) < 5;
+  // Note: The rotation logic is: compass rotates -heading, qibla is at qiblaDirection.
+  // So when heading == qiblaDirection, the qibla indicator is at 0 (top).
+  const relativeQibla = qiblaDirection !== null ? (qiblaDirection - compassHeading + 360) % 360 : 0;
+  const aligned = Math.abs(relativeQibla) < 5 || Math.abs(relativeQibla - 360) < 5;
 
   const requestPermission = () => {
     // @ts-ignore
@@ -1368,7 +1385,7 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
         {/* Compass Container */}
         <div className="relative w-72 h-72">
           {/* Outer Ring */}
-          <div className="absolute inset-0 rounded-full border-4 border-brand-surface shadow-[0_0_30px_rgba(var(--primary-rgb),0.1)]" />
+          <div className={`absolute inset-0 rounded-full border-4 transition-colors duration-500 ${aligned ? 'border-brand-primary shadow-[0_0_40px_rgba(var(--primary-rgb),0.3)]' : 'border-brand-surface shadow-[0_0_30px_rgba(var(--primary-rgb),0.1)]'}`} />
           
           {/* Compass Card */}
           <motion.div 
@@ -1383,11 +1400,11 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
             <span className="absolute left-4 font-bold text-text-muted/40">W</span>
             
             {/* Degree Marks */}
-            {[...Array(12)].map((_, i) => (
+            {[...Array(36)].map((_, i) => (
               <div 
                 key={i} 
-                className="absolute w-0.5 h-2 bg-text-muted/20" 
-                style={{ transform: `rotate(${i * 30}deg) translateY(-130px)` }} 
+                className={`absolute w-0.5 ${i % 9 === 0 ? 'h-3 bg-brand-primary' : 'h-1.5 bg-text-muted/20'}`} 
+                style={{ transform: `rotate(${i * 10}deg) translateY(-130px)` }} 
               />
             ))}
 
@@ -1397,48 +1414,83 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
                 className="absolute flex flex-col items-center"
                 style={{ transform: `rotate(${qiblaDirection}deg) translateY(-110px)` }}
               >
-                <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]">
-                  <MosqueIcon size={16} />
-                </div>
-                <div className="w-1 h-20 bg-gradient-to-t from-transparent to-brand-primary mt-2 opacity-50" />
+                <motion.div 
+                  animate={{ scale: aligned ? 1.2 : 1 }}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors duration-300 ${aligned ? 'bg-brand-primary text-brand-dark' : 'bg-brand-dark text-brand-primary border border-brand-primary/30'}`}
+                >
+                  <MosqueIcon size={20} />
+                </motion.div>
+                <div className={`w-1 h-24 mt-2 transition-opacity duration-300 ${aligned ? 'bg-brand-primary opacity-40' : 'bg-brand-primary opacity-10'}`} />
               </div>
             )}
           </motion.div>
 
           {/* Center Needle (Fixed) */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-1 h-32 bg-brand-primary rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)]" />
-            <div className="w-4 h-4 rounded-full bg-brand-primary border-4 border-brand-dark shadow-lg" />
+            <div className={`w-1 h-32 rounded-full shadow-lg transition-colors duration-300 ${aligned ? 'bg-brand-primary' : 'bg-brand-primary/40'}`} />
+            <div className="w-5 h-5 rounded-full bg-brand-primary border-4 border-brand-dark shadow-xl" />
           </div>
+
+          {/* Alignment Glow */}
+          {aligned && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.1, 0.3, 0.1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="absolute inset-0 rounded-full bg-brand-primary blur-3xl -z-10"
+            />
+          )}
         </div>
 
         {/* Info & Controls */}
         <div className="text-center space-y-6">
           {error ? (
-            <p className="text-red-400 text-sm font-medium">{error}</p>
+            <p className="text-red-400 text-sm font-medium bg-red-400/10 px-4 py-2 rounded-lg">{error}</p>
           ) : (
-            <div className="space-y-2">
-              <p className="text-text-muted text-xs font-medium uppercase tracking-widest">
-                {language === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}
-              </p>
-              <h3 className="text-3xl font-bold text-brand-primary font-mono">
-                {qiblaDirection ? `${Math.round(qiblaDirection)}°` : '--°'}
-              </h3>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-text-muted text-[10px] font-bold uppercase tracking-[0.2em]">
+                  {language === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}
+                </p>
+                <h3 className={`text-4xl font-bold font-mono transition-colors duration-300 ${aligned ? 'text-brand-primary' : 'text-text-main'}`}>
+                  {qiblaDirection ? `${Math.round(qiblaDirection)}°` : '--°'}
+                </h3>
+              </div>
+              
+              {distance && (
+                <div className="flex items-center justify-center gap-2 text-text-muted/60">
+                  <span className="text-xs font-medium">
+                    {language === 'ar' ? `تبعد الكعبة ${distance.toLocaleString()} كم` : `${distance.toLocaleString()} km to Kaaba`}
+                  </span>
+                </div>
+              )}
+
+              {aligned && (
+                <motion.p 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-brand-primary text-sm font-bold animate-pulse"
+                >
+                  {language === 'ar' ? 'أنت باتجاه القبلة الآن' : 'You are facing Qibla'}
+                </motion.p>
+              )}
             </div>
           )}
 
-          <button 
-            onClick={requestPermission}
-            className="px-8 py-3 rounded-2xl bg-brand-primary/10 text-brand-primary text-xs font-bold border border-brand-primary/20 hover:bg-brand-primary/20 transition-all active:scale-95"
-          >
-            {language === 'ar' ? 'معايرة البوصلة' : 'Calibrate Compass'}
-          </button>
-          
-          {location && (
-            <p className="text-[10px] text-text-muted/40 font-mono">
-              {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
-            </p>
-          )}
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={requestPermission}
+              className="px-8 py-3 rounded-2xl bg-brand-primary text-brand-dark text-xs font-bold shadow-lg shadow-brand-primary/20 hover:scale-105 transition-all active:scale-95"
+            >
+              {language === 'ar' ? 'معايرة البوصلة' : 'Calibrate Compass'}
+            </button>
+            
+            {location && (
+              <p className="text-[10px] text-text-muted/30 font-mono tracking-widest">
+                {location.lat.toFixed(4)}°N / {location.lng.toFixed(4)}°E
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
