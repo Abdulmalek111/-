@@ -240,10 +240,10 @@ export default function App() {
             setTimeout(() => setShowSplash(false), 500);
             return 100;
           }
-          // 1% every 100ms = 10 seconds total for progress
+          // 1% every 70ms = 7 seconds total for progress
           return Math.min(prev + 1, 100);
         });
-      }, 100);
+      }, 70);
       return () => clearInterval(interval);
     }
   }, [showSplash]);
