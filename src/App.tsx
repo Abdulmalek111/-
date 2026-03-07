@@ -220,13 +220,13 @@ export default function App() {
         setLoadingProgress((prev) => {
           if (prev >= 100) {
             clearInterval(interval);
-            setTimeout(() => setShowSplash(false), 800);
+            setTimeout(() => setShowSplash(false), 500);
             return 100;
           }
-          // Increment by 1 every 100ms for exactly 10 seconds total
-          return Math.min(prev + 1, 100);
+          // Faster increment: 5% every 50ms = 1 second total for progress
+          return Math.min(prev + 5, 100);
         });
-      }, 100);
+      }, 50);
       return () => clearInterval(interval);
     }
   }, [showSplash]);
