@@ -240,10 +240,10 @@ export default function App() {
             setTimeout(() => setShowSplash(false), 500);
             return 100;
           }
-          // Faster increment: 5% every 50ms = 1 second total for progress
-          return Math.min(prev + 5, 100);
+          // 1% every 100ms = 10 seconds total for progress
+          return Math.min(prev + 1, 100);
         });
-      }, 50);
+      }, 100);
       return () => clearInterval(interval);
     }
   }, [showSplash]);
