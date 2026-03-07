@@ -1,5 +1,5 @@
 {
   "name": "تطبيق طمأنينة",
   "description": "تطبيق إسلامي شامل يضم مواقيت الصلاة، الأذكار، والسبحة الإلكترونية بتصميم عصري.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["geolocation"]
 }

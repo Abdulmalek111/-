@@ -26,6 +26,7 @@ import {
   Search,
   MoreVertical,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   Library,
   LayoutGrid,
@@ -110,22 +111,33 @@ export default function App() {
   useEffect(() => {
     const coords = new Coordinates(55.7558, 37.6173);
     const params = CalculationMethod.MuslimWorldLeague();
-    const date = new Date();
-    const pt = new PrayerTimes(coords, date, params);
-    setPrayerTimes(pt);
 
     const updateTimer = () => {
-      const next = pt.nextPrayer();
+      const now = new Date();
+      const pt = new PrayerTimes(coords, now, params);
+      
+      let next = pt.nextPrayer();
+      let nextTime = pt.timeForPrayer(next);
+
+      if (next === "none" || next === "sunrise") {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const ptTomorrow = new PrayerTimes(coords, tomorrow, params);
+        next = "fajr";
+        nextTime = ptTomorrow.fajr;
+        setPrayerTimes(ptTomorrow);
+      } else {
+        setPrayerTimes(pt);
+      }
+
       setNextPrayer(next);
-      if (next !== "none") {
-        const nextTime = pt.timeForPrayer(next);
-        if (nextTime) {
-          const diff = nextTime.getTime() - new Date().getTime();
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-          setTimeToNext(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
-        }
+      
+      if (nextTime) {
+        const diff = nextTime.getTime() - now.getTime();
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeToNext(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
       }
     };
 
@@ -269,7 +281,7 @@ export default function App() {
                   <div className="text-right">
                     <p className="text-[9px] text-white/80 font-medium mb-0.5">{t.nextPrayer}</p>
                     <h2 className="text-2xl font-bold text-white">{getPrayerName(nextPrayer)}</h2>
-                    <p className="text-[9px] text-white/70 mt-0.5">موسكو، الولايات المتحدة الروسية</p>
+                    <p className="text-[9px] text-white/70 mt-0.5">موسكو، روسيا</p>
                   </div>
                 </div>
                 
@@ -364,8 +376,8 @@ export default function App() {
               <div className="space-y-3">
                 <h3 className="font-bold text-sm">{t.extraServices}</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <ServiceIcon icon={<Compass size={18} />} label={t.qibla} />
-                  <ServiceIcon icon={<MapPin size={18} />} label={t.mosques} />
+                  <ServiceIcon icon={<Compass size={18} />} label={t.qibla} onClick={() => setActiveView("qibla")} />
+                  <ServiceIcon icon={<MosqueIcon size={18} />} label={t.mosques} />
                   <ServiceIcon icon={<Calendar size={18} />} label={t.calendar} onClick={() => setActiveView("calendar")} />
                 </div>
               </div>
@@ -376,6 +388,7 @@ export default function App() {
           {activeView === "subha" && <SubhaView onBack={() => setActiveView("home")} language={language} />}
           {activeView === "quran" && <QuranView onBack={() => setActiveView("home")} language={language} />}
           {activeView === "calendar" && <CalendarView onBack={() => setActiveView("home")} language={language} />}
+          {activeView === "qibla" && <QiblaView onBack={() => setActiveView("home")} language={language} />}
           {activeView === "settings" && (
             <SettingsView 
               onBack={() => setActiveView("home")} 
@@ -416,6 +429,26 @@ function SectionButton({ icon, title, subtitle, onClick }: { icon: React.ReactNo
   );
 }
 
+const MosqueIcon = ({ size = 18 }: { size?: number }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M2 20h20" />
+    <path d="M7 20v-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5" />
+    <path d="M12 11V7" />
+    <path d="M12 7a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4" />
+    <path d="M12 7a3 3 0 0 1 3-3 3 3 0 0 1 3 3v4" />
+    <circle cx="12" cy="3" r="1" />
+  </svg>
+);
+
 function ServiceIcon({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick?: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1.5 group">
@@ -455,141 +488,79 @@ function DhikrView({ onBack, language }: { onBack: () => void, language: Languag
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6 pb-10"
+      className="space-y-4 pb-10"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button className="text-text-muted">
-            <MoreVertical size={20} />
-          </button>
-          <button className="text-text-muted">
-            <Search size={20} />
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-text-main">{t.allDhikr}</h2>
-          <button onClick={onBack} className="w-9 h-9 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary">
-            {language === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="w-10" />
+        <h2 className="text-xl font-bold text-text-main">{t.allDhikr}</h2>
+        <button onClick={onBack} className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
+          {language === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
+        </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <input 
-          type="text" 
-          placeholder={t.search} 
-          className="w-full bg-brand-card/40 border border-brand-border rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
+      {/* Categories List */}
+      <div className="space-y-3">
+        <DhikrListItem 
+          title={t.morningDhikr} 
+          subtitle="أذكار الصباح اليومية" 
+          onClick={() => setActiveCategory("morning")}
         />
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary" />
-      </div>
-
-      {/* Basic Dhikr */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-end gap-2 text-brand-primary">
-          <h3 className="font-bold">{t.mainSections}</h3>
-          <Sparkles size={18} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <DhikrImageCard 
-            title={t.morningDhikr} 
-            image="https://picsum.photos/seed/morning/400/300" 
-            onClick={() => setActiveCategory("morning")}
-          />
-          <DhikrImageCard 
-            title={t.eveningDhikr} 
-            image="https://picsum.photos/seed/evening/400/300" 
-            onClick={() => setActiveCategory("evening")}
-          />
-        </div>
-      </div>
-
-      {/* Sahih Bukhari & Muslim */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button className="text-xs text-brand-primary font-medium">عرض الكل</button>
-          <div className="flex items-center gap-2 text-brand-primary">
-            <h3 className="font-bold">صحيح البخاري ومسلم</h3>
-            <Library size={18} />
-          </div>
-        </div>
-        <div className="space-y-3">
-          <DhikrListItem 
-            icon={<Sunrise size={20} />} 
-            title="أذكار الاستيقاظ" 
-            subtitle="ما يقوله المسلم عند القيام من النوم" 
-          />
-          <DhikrListItem 
-            icon={<Home size={20} />} 
-            title="أذكار الصلاة" 
-            subtitle="أدعية الاستفتاح والركوع والسجود" 
-          />
-        </div>
-      </div>
-
-      {/* Additional Categories */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-end gap-2 text-brand-primary">
-          <h3 className="font-bold">تصنيفات إضافية</h3>
-          <LayoutGrid size={18} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <CategorySmallCard icon={<Home size={18} />} title="أذكار المنزل" />
-          <CategorySmallCard icon={<Plane size={18} />} title="أذكار السفر" />
-          <CategorySmallCard icon={<Bed size={18} />} title="أذكار النوم" />
-          <CategorySmallCard icon={<BookOpen size={18} />} title="أدعية قرآنية" />
-          <CategorySmallCard icon={<Smile size={18} />} title="أذكار الفرح" />
-          <CategorySmallCard icon={<PlusSquare size={18} />} title="أدعية المريض" />
-        </div>
+        <DhikrListItem 
+          title={t.eveningDhikr} 
+          subtitle="أذكار المساء اليومية" 
+          onClick={() => setActiveCategory("evening")}
+        />
+        <DhikrListItem 
+          title="أذكار الاستيقاظ" 
+          subtitle="ما يقوله المسلم عند القيام من النوم" 
+        />
+        <DhikrListItem 
+          title="أذكار الصلاة" 
+          subtitle="أدعية الاستفتاح والركوع والسجود" 
+        />
+        <DhikrListItem 
+          title="أذكار النوم" 
+          subtitle="ما يقرأه المسلم قبل النوم" 
+        />
+        <DhikrListItem 
+          title="أذكار السفر" 
+          subtitle="أدعية السفر والترحال" 
+        />
+        <DhikrListItem 
+          title="أدعية قرآنية" 
+          subtitle="أدعية من القرآن الكريم" 
+        />
+        <DhikrListItem 
+          title="أذكار الفرح" 
+          subtitle="ما يقوله المسلم عند السرور" 
+        />
+        <DhikrListItem 
+          title="أدعية المريض" 
+          subtitle="أدعية الشفاء والرقية" 
+        />
       </div>
     </motion.div>
   );
 }
 
-function DhikrImageCard({ title, image, onClick }: { title: string, image: string, onClick: () => void }) {
+
+function DhikrListItem({ title, subtitle, onClick }: { title: string, subtitle: string, onClick?: () => void }) {
   return (
     <button 
       onClick={onClick}
-      className="relative aspect-[4/3] rounded-3xl overflow-hidden group active:scale-95 transition-all"
+      className="w-full bg-[#0a120e] border border-white/5 rounded-[40px] p-6 flex items-center justify-center text-center hover:bg-[#0f1a14] transition-all group"
     >
-      <img src={image} alt={title} className="w-full h-full object-cover brightness-50 group-hover:scale-110 transition-transform duration-500" referrerPolicy="no-referrer" />
-      <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/80 to-transparent" />
-      <div className="absolute bottom-4 right-4 text-right">
-        <span className="bg-brand-primary/20 text-brand-primary text-[8px] font-bold px-2 py-0.5 rounded-full mb-1 inline-block">يومي</span>
-        <h4 className="text-text-main font-bold text-sm">{title}</h4>
+      <div className="flex-1">
+        <h4 className="text-white font-bold text-lg mb-1">{title}</h4>
+        <p className="text-white/50 text-sm">{subtitle}</p>
       </div>
     </button>
   );
 }
 
-function DhikrListItem({ icon, title, subtitle }: { icon: React.ReactNode, title: string, subtitle: string }) {
-  return (
-    <button className="w-full glass-card p-4 flex items-center justify-between hover:bg-brand-card transition-colors group">
-      <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary group-hover:scale-110 transition-transform">
-        {icon}
-      </div>
-      <div className="flex-1 text-right px-4">
-        <h4 className="text-text-main font-bold text-sm mb-0.5">{title}</h4>
-        <p className="text-[10px] text-text-muted">{subtitle}</p>
-      </div>
-      <ChevronLeft size={14} className="text-text-muted/20" />
-    </button>
-  );
-}
 
-function CategorySmallCard({ icon, title }: { icon: React.ReactNode, title: string }) {
-  return (
-    <button className="glass-card p-4 flex flex-col items-center gap-2 hover:bg-brand-card transition-all active:scale-95 group">
-      <div className="text-brand-primary group-hover:scale-110 transition-transform">
-        {icon}
-      </div>
-      <span className="text-xs font-bold text-text-main/80">{title}</span>
-    </button>
-  );
-}
-
-function DhikrCard({ item }: { item: DhikrItem }) {
+function DhikrCard({ item, language }: { item: DhikrItem, language: string }) {
   const [currentCount, setCurrentCount] = useState(0);
 
   const handleIncrement = () => {
@@ -599,35 +570,47 @@ function DhikrCard({ item }: { item: DhikrItem }) {
     }
   };
 
+  const handleReset = () => {
+    setCurrentCount(0);
+  };
+
   return (
-    <div className="glass-card p-5 space-y-4">
-      {item.source && (
-        <span className="inline-block px-2 py-1 rounded bg-brand-primary/10 text-brand-primary text-[10px] font-bold">
-          {item.source}
-        </span>
-      )}
-      <p className="text-lg leading-relaxed text-right font-medium">
+    <div className="bg-[#0a120e] border border-white/5 rounded-[32px] p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        {item.source && (
+          <span className="inline-block px-3 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold">
+            {item.source}
+          </span>
+        )}
+        <button 
+          onClick={handleReset}
+          className="p-2 rounded-xl bg-white/5 text-white/20 hover:text-brand-primary transition-colors"
+        >
+          <RotateCcw size={16} />
+        </button>
+      </div>
+      <p className="text-xl leading-relaxed text-right font-medium text-white">
         {item.text}
       </p>
-      <div className="flex items-center justify-between pt-4 border-t border-brand-border">
+      <div className="flex items-center justify-between pt-6 border-t border-white/5">
         <button 
           onClick={handleIncrement}
           className={cn(
-            "px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2",
+            "px-8 py-3 rounded-2xl font-bold transition-all flex items-center gap-3",
             currentCount === item.count 
-              ? "bg-brand-primary/20 text-brand-primary/50 cursor-default" 
-              : "bg-brand-primary text-brand-dark active:scale-95"
+              ? "bg-brand-primary/10 text-brand-primary/30 cursor-default" 
+              : "bg-brand-primary text-brand-dark active:scale-95 shadow-lg shadow-brand-primary/20"
           )}
         >
-          <span>{language === 'ar' ? 'التكرار' : (language === 'ru' ? 'Повтор' : 'Repeat')}</span>
-          <span className="font-mono">{currentCount} / {item.count}</span>
+          <span className="text-sm">{language === 'ar' ? 'التكرار' : (language === 'ru' ? 'Повтор' : 'Repeat')}</span>
+          <span className="font-mono text-lg">{currentCount} / {item.count}</span>
         </button>
-        <div className="flex gap-2">
-          <button className="p-2 rounded-lg bg-brand-surface text-text-muted/40 hover:text-brand-primary transition-colors">
-            <Copy size={18} />
+        <div className="flex gap-3">
+          <button className="p-3 rounded-xl bg-white/5 text-white/40 hover:text-brand-primary transition-colors">
+            <Copy size={20} />
           </button>
-          <button className="p-2 rounded-lg bg-brand-surface text-text-muted/40 hover:text-brand-primary transition-colors">
-            <Share2 size={18} />
+          <button className="p-3 rounded-xl bg-white/5 text-white/40 hover:text-brand-primary transition-colors">
+            <Share2 size={20} />
           </button>
         </div>
       </div>
@@ -658,7 +641,7 @@ function DhikrDetailView({ category, onBack, language }: { category: string, onB
       <div className="space-y-4">
         {items.map((item) => (
           <div key={item.id}>
-            <DhikrCard item={item} />
+            <DhikrCard item={item} language={language} />
           </div>
         ))}
       </div>
@@ -1104,8 +1087,6 @@ function SettingsView({
             <p className="text-[9px] text-brand-primary/40 mt-4 font-mono">{t.version} 1.0.0</p>
           </div>
         </section>
-          </div>
-        </section>
       </div>
     </motion.div>
   );
@@ -1294,6 +1275,170 @@ function CalendarView({ onBack, language }: { onBack: () => void, language: Lang
               <span className="text-[9px] font-bold text-brand-primary">{event.daysLeft}</span>
             </div>
           ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function QiblaView({ onBack, language }: { onBack: () => void, language: Language }) {
+  const t = translations[language];
+  const [qiblaDirection, setQiblaDirection] = useState<number | null>(null);
+  const [compassHeading, setCompassHeading] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError(language === 'ar' ? 'الموقع الجغرافي غير مدعوم' : 'Geolocation not supported');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation({ lat: latitude, lng: longitude });
+        
+        // Calculate Qibla
+        const kaabaLat = 21.42247 * (Math.PI / 180);
+        const kaabaLng = 39.82621 * (Math.PI / 180);
+        const myLat = latitude * (Math.PI / 180);
+        const myLng = longitude * (Math.PI / 180);
+        
+        const y = Math.sin(kaabaLng - myLng);
+        const x = Math.cos(myLat) * Math.tan(kaabaLat) - Math.sin(myLat) * Math.cos(kaabaLng - myLng);
+        let qibla = Math.atan2(y, x) * (180 / Math.PI);
+        qibla = (qibla + 360) % 360;
+        setQiblaDirection(qibla);
+      },
+      (err) => {
+        setError(language === 'ar' ? 'فشل الحصول على الموقع' : 'Failed to get location');
+        console.error(err);
+      }
+    );
+
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      // @ts-ignore - webkitCompassHeading is non-standard but widely supported on iOS
+      const heading = e.webkitCompassHeading || (360 - (e.alpha || 0));
+      setCompassHeading(heading);
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    return () => window.removeEventListener('deviceorientation', handleOrientation);
+  }, [language]);
+
+  const requestPermission = () => {
+    // @ts-ignore
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // @ts-ignore
+      DeviceOrientationEvent.requestPermission()
+        .then((response: string) => {
+          if (response === 'granted') {
+            window.addEventListener('deviceorientation', (e) => {
+               // @ts-ignore
+              const heading = e.webkitCompassHeading || (360 - (e.alpha || 0));
+              setCompassHeading(heading);
+            }, true);
+          }
+        })
+        .catch(console.error);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="space-y-8 pb-10 flex flex-col items-center"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between w-full">
+        <button 
+          onClick={onBack}
+          className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border"
+        >
+          {language === 'ar' ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+        </button>
+        <h2 className="text-xl font-bold text-text-main">{t.qibla}</h2>
+        <div className="w-9" />
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center gap-12 py-8">
+        {/* Compass Container */}
+        <div className="relative w-72 h-72">
+          {/* Outer Ring */}
+          <div className="absolute inset-0 rounded-full border-4 border-brand-surface shadow-[0_0_30px_rgba(var(--primary-rgb),0.1)]" />
+          
+          {/* Compass Card */}
+          <motion.div 
+            className="absolute inset-0 flex items-center justify-center"
+            animate={{ rotate: -compassHeading }}
+            transition={{ type: "spring", stiffness: 50, damping: 20 }}
+          >
+            {/* Cardinal Points */}
+            <span className="absolute top-4 font-bold text-brand-primary">N</span>
+            <span className="absolute bottom-4 font-bold text-text-muted/40">S</span>
+            <span className="absolute right-4 font-bold text-text-muted/40">E</span>
+            <span className="absolute left-4 font-bold text-text-muted/40">W</span>
+            
+            {/* Degree Marks */}
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i} 
+                className="absolute w-0.5 h-2 bg-text-muted/20" 
+                style={{ transform: `rotate(${i * 30}deg) translateY(-130px)` }} 
+              />
+            ))}
+
+            {/* Qibla Indicator (Kaaba Icon) */}
+            {qiblaDirection !== null && (
+              <div 
+                className="absolute flex flex-col items-center"
+                style={{ transform: `rotate(${qiblaDirection}deg) translateY(-110px)` }}
+              >
+                <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]">
+                  <MosqueIcon size={16} />
+                </div>
+                <div className="w-1 h-20 bg-gradient-to-t from-transparent to-brand-primary mt-2 opacity-50" />
+              </div>
+            )}
+          </motion.div>
+
+          {/* Center Needle (Fixed) */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-1 h-32 bg-brand-primary rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)]" />
+            <div className="w-4 h-4 rounded-full bg-brand-primary border-4 border-brand-dark shadow-lg" />
+          </div>
+        </div>
+
+        {/* Info & Controls */}
+        <div className="text-center space-y-6">
+          {error ? (
+            <p className="text-red-400 text-sm font-medium">{error}</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-text-muted text-xs font-medium uppercase tracking-widest">
+                {language === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}
+              </p>
+              <h3 className="text-3xl font-bold text-brand-primary font-mono">
+                {qiblaDirection ? `${Math.round(qiblaDirection)}°` : '--°'}
+              </h3>
+            </div>
+          )}
+
+          <button 
+            onClick={requestPermission}
+            className="px-8 py-3 rounded-2xl bg-brand-primary/10 text-brand-primary text-xs font-bold border border-brand-primary/20 hover:bg-brand-primary/20 transition-all active:scale-95"
+          >
+            {language === 'ar' ? 'معايرة البوصلة' : 'Calibrate Compass'}
+          </button>
+          
+          {location && (
+            <p className="text-[10px] text-text-muted/40 font-mono">
+              {location.lat.toFixed(4)}°N, {location.lng.toFixed(4)}°E
+            </p>
+          )}
         </div>
       </div>
     </motion.div>
