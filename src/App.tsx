@@ -43,10 +43,11 @@ import {
   Type,
   Globe,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Check
 } from "lucide-react";
 import { Coordinates, CalculationMethod, PrayerTimes } from "adhan";
-import { cn, MORNING_DHIKR, EVENING_DHIKR, PRAYER_NAMES, DhikrItem } from "./lib/utils";
+import { cn, MORNING_DHIKR, EVENING_DHIKR, BUKHARI_MUSLIM_DHIKR, DUAS, PRAYER_NAMES, DhikrItem } from "./lib/utils";
 import { SURAHS } from "./lib/quranData";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { translations, Language } from "./translations";
@@ -62,6 +63,7 @@ export default function App() {
   const [timeToNext, setTimeToNext] = useState<string>("");
   const [notificationMode, setNotificationMode] = useState<'sound' | 'vibrate' | 'silent'>('sound');
   const [lastNotifiedPrayer, setLastNotifiedPrayer] = useState<string | null>(null);
+  const [activePrayerNotification, setActivePrayerNotification] = useState<string | null>(null);
 
   // Global Settings
   const [primaryColor, setPrimaryColor] = useState("#0bda84");
@@ -163,7 +165,9 @@ export default function App() {
     }
   };
 
-  const triggerNotification = async () => {
+  const triggerNotification = async (prayerName: string) => {
+    setActivePrayerNotification(prayerName);
+    
     if (notificationMode === 'silent') return;
 
     // Vibrate for both 'vibrate' and 'sound' modes
@@ -212,7 +216,7 @@ export default function App() {
           const diff = Math.abs(now.getTime() - prayerTime.getTime());
           // If we are within 5 seconds of the actual prayer time
           if (diff < 5000) {
-            triggerNotification();
+            triggerNotification(currentPrayer);
             setLastNotifiedPrayer(currentPrayer);
           }
         }
@@ -263,6 +267,40 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-[100dvh] max-w-[400px] mx-auto bg-brand-dark overflow-hidden relative shadow-2xl border-x border-brand-border" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Prayer Notification Overlay */}
+      <AnimatePresence>
+        {activePrayerNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -100 }}
+            className="absolute top-4 left-4 right-4 z-[100]"
+          >
+            <div className="bg-brand-surface border border-brand-primary/30 rounded-2xl p-4 shadow-2xl shadow-brand-primary/20 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <Clock size={24} />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-brand-primary font-bold text-sm">
+                  {language === 'ar' ? 'حان وقت الصلاة' : 'Prayer Time'}
+                </h4>
+                <p className="text-text-main font-medium text-xs">
+                  {language === 'ar' 
+                    ? `حان وقت صلاة ${getPrayerName(activePrayerNotification)}` 
+                    : `It is time for ${getPrayerName(activePrayerNotification)} prayer`}
+                </p>
+              </div>
+              <button 
+                onClick={() => setActivePrayerNotification(null)}
+                className="w-8 h-8 rounded-lg bg-brand-hover flex items-center justify-center text-text-muted hover:text-text-main transition-colors"
+              >
+                <Check size={16} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-3">
         <div className="flex items-center gap-2 text-brand-primary">
@@ -512,95 +550,104 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
 function DhikrView({ onBack, language }: { onBack: () => void, language: Language }) {
   const t = translations[language];
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  if (activeCategory === "morning" || activeCategory === "evening") {
+  if (activeCategory) {
     return <DhikrDetailView category={activeCategory} onBack={() => setActiveCategory(null)} language={language} />;
   }
+
+  const categories = [
+    { id: "morning", title: t.morningDhikr, subtitle: "أذكار الصباح اليومية", icon: <Sunrise className="text-orange-400" /> },
+    { id: "evening", title: t.eveningDhikr, subtitle: "أذكار المساء اليومية", icon: <Sunset className="text-indigo-400" /> },
+    { id: "sleep", title: "أذكار النوم", subtitle: "ما يقرأه المسلم قبل النوم", icon: <Bed className="text-blue-400" /> },
+    { id: "prayer", title: "أذكار الصلاة", subtitle: "أدعية الاستفتاح والركوع والسجود", icon: <Heart className="text-red-400" /> },
+    { id: "travel", title: "أذكار السفر", subtitle: "أدعية السفر والترحال", icon: <Plane className="text-emerald-400" /> },
+    { id: "quranic", title: "أدعية قرآنية", subtitle: "أدعية من القرآن الكريم", icon: <BookOpen className="text-amber-400" /> },
+  ];
+
+  const filteredCategories = categories.filter(cat => 
+    cat.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    cat.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-4 pb-10"
+      className="space-y-6 pb-10"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="w-10" />
-        <h2 className="text-xl font-bold text-text-main">{t.allDhikr}</h2>
-        <button onClick={onBack} className="w-9 h-9 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border">
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="w-10 h-10 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border active:scale-90 transition-transform">
           {language === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
         </button>
+        <h2 className="text-xl font-bold text-text-main">{t.allDhikr}</h2>
+        <div className="w-10" />
       </div>
 
-      {/* Categories List */}
-      <div className="space-y-3">
-        <DhikrListItem 
-          title={t.morningDhikr} 
-          subtitle="أذكار الصباح اليومية" 
-          onClick={() => setActiveCategory("morning")}
+      {/* Search Bar */}
+      <div className="relative">
+        <input 
+          type="text" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="ابحث عن ذكر أو تصنيف..." 
+          className="w-full bg-brand-card/40 border border-brand-border rounded-2xl py-3.5 px-12 text-sm text-right focus:outline-none focus:border-brand-primary/50 transition-all shadow-inner"
         />
-        <DhikrListItem 
-          title={t.eveningDhikr} 
-          subtitle="أذكار المساء اليومية" 
-          onClick={() => setActiveCategory("evening")}
-        />
-        <DhikrListItem 
-          title="أذكار الاستيقاظ" 
-          subtitle="ما يقوله المسلم عند القيام من النوم" 
-        />
-        <DhikrListItem 
-          title="أذكار الصلاة" 
-          subtitle="أدعية الاستفتاح والركوع والسجود" 
-        />
-        <DhikrListItem 
-          title="أذكار النوم" 
-          subtitle="ما يقرأه المسلم قبل النوم" 
-        />
-        <DhikrListItem 
-          title="أذكار السفر" 
-          subtitle="أدعية السفر والترحال" 
-        />
-        <DhikrListItem 
-          title="أدعية قرآنية" 
-          subtitle="أدعية من القرآن الكريم" 
-        />
-        <DhikrListItem 
-          title="أذكار الفرح" 
-          subtitle="ما يقوله المسلم عند السرور" 
-        />
-        <DhikrListItem 
-          title="أدعية المريض" 
-          subtitle="أدعية الشفاء والرقية" 
-        />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/60" />
+      </div>
+
+      {/* Categories Grid */}
+      <div className="grid grid-cols-1 gap-4">
+        {filteredCategories.map((cat) => (
+          <DhikrListItem 
+            key={cat.id}
+            title={cat.title} 
+            subtitle={cat.subtitle} 
+            icon={cat.icon}
+            onClick={() => setActiveCategory(cat.id)}
+          />
+        ))}
+        {filteredCategories.length === 0 && (
+          <div className="text-center py-10 text-text-muted">
+            <Search size={40} className="mx-auto mb-3 opacity-20" />
+            <p>لم يتم العثور على نتائج</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );
 }
 
-
-function DhikrListItem({ title, subtitle, onClick }: { title: string, subtitle: string, onClick?: () => void }) {
+function DhikrListItem({ title, subtitle, icon, onClick }: { title: string, subtitle: string, icon: React.ReactNode, onClick?: () => void, key?: React.Key }) {
   return (
     <button 
       onClick={onClick}
-      className="w-full bg-[#0a120e] border border-white/5 rounded-[40px] p-6 flex items-center justify-center text-center hover:bg-[#0f1a14] transition-all group"
+      className="w-full bg-brand-surface/40 border border-brand-border rounded-[24px] p-5 flex items-center gap-4 hover:bg-brand-surface/60 transition-all group active:scale-[0.98]"
     >
-      <div className="flex-1">
-        <h4 className="text-white font-bold text-lg mb-1">{title}</h4>
-        <p className="text-white/50 text-sm">{subtitle}</p>
+      <div className="w-14 h-14 rounded-2xl bg-brand-dark/50 flex items-center justify-center border border-brand-border group-hover:border-brand-primary/30 transition-all shadow-lg">
+        {icon}
+      </div>
+      <div className="flex-1 text-right">
+        <h4 className="text-text-main font-bold text-base mb-0.5 group-hover:text-brand-primary transition-colors">{title}</h4>
+        <p className="text-text-muted text-[11px] leading-tight">{subtitle}</p>
+      </div>
+      <div className="text-brand-primary/40 group-hover:text-brand-primary transition-colors">
+        <ChevronLeft size={20} />
       </div>
     </button>
   );
 }
 
-
-function DhikrCard({ item, language }: { item: DhikrItem, language: string }) {
+function DhikrCard({ item, language }: { item: DhikrItem, language: string, key?: React.Key }) {
   const [currentCount, setCurrentCount] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const handleIncrement = () => {
     if (currentCount < item.count) {
       setCurrentCount(prev => prev + 1);
-      if (navigator.vibrate) navigator.vibrate(50);
+      if (navigator.vibrate) navigator.vibrate(30);
     }
   };
 
@@ -608,43 +655,154 @@ function DhikrCard({ item, language }: { item: DhikrItem, language: string }) {
     setCurrentCount(0);
   };
 
+  const handleSpeak = async () => {
+    if (isSpeaking) return;
+    setIsSpeaking(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: item.text }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+        audio.onended = () => setIsSpeaking(false);
+        audio.play();
+      } else {
+        setIsSpeaking(false);
+      }
+    } catch (error) {
+      console.error("TTS Error:", error);
+      setIsSpeaking(false);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(item.text);
+    // Optional: add a toast or feedback
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'ذكر من تطبيق طمأنينة',
+          text: item.text,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      handleCopy();
+    }
+  };
+
+  const progress = (currentCount / item.count) * 100;
+  const isCompleted = currentCount === item.count;
+
   return (
-    <div className="bg-[#0a120e] border border-white/5 rounded-[32px] p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        {item.source && (
-          <span className="inline-block px-3 py-1 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold">
-            {item.source}
-          </span>
-        )}
-        <button 
-          onClick={handleReset}
-          className="p-2 rounded-xl bg-white/5 text-white/20 hover:text-brand-primary transition-colors"
-        >
-          <RotateCcw size={16} />
-        </button>
+    <div className={cn(
+      "bg-brand-surface/30 border border-brand-border rounded-[32px] p-6 space-y-5 relative overflow-hidden group transition-all duration-500",
+      isCompleted && "bg-brand-primary/5 border-brand-primary/20 shadow-lg shadow-brand-primary/5"
+    )}>
+      {/* Progress Background */}
+      <div 
+        className={cn(
+          "absolute bottom-0 right-0 h-1 transition-all duration-500",
+          isCompleted ? "bg-brand-primary w-full" : "bg-brand-primary/20"
+        )} 
+        style={{ width: isCompleted ? '100%' : `${progress}%` }}
+      />
+      
+      <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-2">
+          {item.source && (
+            <span className={cn(
+              "px-3 py-1 rounded-full text-[9px] font-bold border transition-colors",
+              isCompleted ? "bg-brand-primary/20 text-brand-primary border-brand-primary/30" : "bg-brand-primary/10 text-brand-primary border-brand-primary/20"
+            )}>
+              {item.source}
+            </span>
+          )}
+          {isCompleted && (
+            <motion.span 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="flex items-center gap-1 text-[9px] font-bold text-brand-primary bg-brand-primary/10 px-2 py-1 rounded-full"
+            >
+              <Check size={10} />
+              <span>تم الإكمال</span>
+            </motion.span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleSpeak}
+            disabled={isSpeaking}
+            className={cn(
+              "p-2.5 rounded-xl transition-all",
+              isSpeaking ? "bg-brand-primary/20 text-brand-primary animate-pulse" : "bg-white/5 text-text-muted hover:text-brand-primary"
+            )}
+          >
+            <Volume2 size={16} />
+          </button>
+          <button 
+            onClick={handleReset}
+            className="p-2.5 rounded-xl bg-white/5 text-text-muted hover:text-red-400 transition-colors"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
       </div>
-      <p className="text-xl leading-relaxed text-right font-medium text-white">
+
+      <p className={cn(
+        "text-lg leading-relaxed text-right font-medium transition-colors",
+        isCompleted ? "text-brand-primary" : "text-text-main"
+      )}>
         {item.text}
       </p>
-      <div className="flex items-center justify-between pt-6 border-t border-white/5">
+
+      <div className="flex items-center justify-between pt-5 border-t border-brand-border/50 relative z-10">
         <button 
           onClick={handleIncrement}
+          disabled={isCompleted}
           className={cn(
-            "px-8 py-3 rounded-2xl font-bold transition-all flex items-center gap-3",
-            currentCount === item.count 
-              ? "bg-brand-primary/10 text-brand-primary/30 cursor-default" 
+            "flex-1 ml-4 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-4 relative overflow-hidden",
+            isCompleted 
+              ? "bg-brand-primary/10 text-brand-primary/40 cursor-default" 
               : "bg-brand-primary text-brand-dark active:scale-95 shadow-lg shadow-brand-primary/20"
           )}
         >
-          <span className="text-sm">{language === 'ar' ? 'التكرار' : (language === 'ru' ? 'Повтор' : 'Repeat')}</span>
-          <span className="font-mono text-lg">{currentCount} / {item.count}</span>
+          <span className="text-xs">{isCompleted ? (language === 'ar' ? 'مكتمل' : 'Completed') : (language === 'ar' ? 'التكرار' : 'Repeat')}</span>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-xl">{currentCount}</span>
+            <span className="text-[10px] opacity-60">/ {item.count}</span>
+          </div>
         </button>
-        <div className="flex gap-3">
-          <button className="p-3 rounded-xl bg-white/5 text-white/40 hover:text-brand-primary transition-colors">
-            <Copy size={20} />
+
+        <div className="flex gap-2">
+          <button 
+            onClick={handleCopy}
+            className="p-3.5 rounded-2xl bg-white/5 text-text-muted hover:text-brand-primary transition-all active:scale-90"
+          >
+            <Copy size={18} />
           </button>
-          <button className="p-3 rounded-xl bg-white/5 text-white/40 hover:text-brand-primary transition-colors">
-            <Share2 size={20} />
+          <button 
+            onClick={handleShare}
+            className="p-3.5 rounded-2xl bg-white/5 text-text-muted hover:text-brand-primary transition-all active:scale-90"
+          >
+            <Share2 size={18} />
           </button>
         </div>
       </div>
@@ -654,30 +812,76 @@ function DhikrCard({ item, language }: { item: DhikrItem, language: string }) {
 
 function DhikrDetailView({ category, onBack, language }: { category: string, onBack: () => void, language: Language }) {
   const t = translations[language];
-  const items = category === "morning" ? MORNING_DHIKR : EVENING_DHIKR;
-  const title = category === "morning" ? t.morningDhikr : t.eveningDhikr;
+  
+  const getItems = () => {
+    switch (category) {
+      case "morning": return MORNING_DHIKR;
+      case "evening": return EVENING_DHIKR;
+      case "prayer": return BUKHARI_MUSLIM_DHIKR;
+      case "sleep":
+      case "travel":
+      case "quranic":
+      default: return DUAS;
+    }
+  };
+
+  const items = getItems();
+  
+  const categoryTitles: Record<string, string> = {
+    morning: t.morningDhikr,
+    evening: t.eveningDhikr,
+    sleep: "أذكار النوم",
+    prayer: "أذكار الصلاة",
+    travel: "أذكار السفر",
+    quranic: "أدعية قرآنية"
+  };
+
+  const title = categoryTitles[category] || t.allDhikr;
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredItems = items.filter(item => 
+    item.text.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6"
+      className="space-y-6 pb-10"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-10" />
-        <h2 className="text-lg font-bold">{title}</h2>
-        <button onClick={onBack} className="p-2 rounded-full bg-brand-surface text-text-muted/60">
+      <div className="flex items-center justify-between sticky top-0 bg-brand-dark/80 backdrop-blur-md py-4 z-20">
+        <button onClick={onBack} className="w-10 h-10 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary border border-brand-border active:scale-90 transition-transform">
           {language === 'ar' ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
         </button>
+        <div className="text-center">
+          <h2 className="text-lg font-bold text-text-main">{title}</h2>
+          <p className="text-[10px] text-brand-primary font-medium">{filteredItems.length} ذكر ودعاء</p>
+        </div>
+        <div className="w-10" />
       </div>
 
-      <div className="space-y-4">
-        {items.map((item) => (
-          <div key={item.id}>
-            <DhikrCard item={item} language={language} />
-          </div>
+      {/* Local Search */}
+      <div className="relative">
+        <input 
+          type="text" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="ابحث في هذه القائمة..." 
+          className="w-full bg-brand-card/40 border border-brand-border rounded-2xl py-3 px-10 text-sm text-right focus:outline-none focus:border-brand-primary/30 transition-colors"
+        />
+        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/40" />
+      </div>
+
+      <div className="space-y-5">
+        {filteredItems.map((item) => (
+          <DhikrCard key={item.id} item={item} language={language} />
         ))}
+        {filteredItems.length === 0 && (
+          <div className="text-center py-10 text-text-muted">
+            <p>لا توجد نتائج مطابقة لبحثك</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -1401,7 +1605,7 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="space-y-8 pb-10 flex flex-col items-center"
+      className="space-y-4 pb-6 flex flex-col items-center"
     >
       {/* Header */}
       <div className="flex items-center justify-between w-full">
@@ -1415,11 +1619,11 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
         <div className="w-9" />
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-12 py-8">
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 py-4">
         {/* Compass Container */}
-        <div className="relative w-72 h-72">
+        <div className="relative w-60 h-60">
           {/* Outer Ring */}
-          <div className={`absolute inset-0 rounded-full border-4 transition-colors duration-500 ${aligned ? 'border-brand-primary shadow-[0_0_40px_rgba(var(--primary-rgb),0.3)]' : 'border-brand-surface shadow-[0_0_30px_rgba(var(--primary-rgb),0.1)]'}`} />
+          <div className={`absolute inset-0 rounded-full border-4 transition-colors duration-500 ${aligned ? 'border-brand-primary shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)]' : 'border-brand-surface shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]'}`} />
           
           {/* Compass Card */}
           <motion.div 
@@ -1428,17 +1632,17 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
             transition={{ type: "spring", stiffness: 50, damping: 20 }}
           >
             {/* Cardinal Points */}
-            <span className="absolute top-4 font-bold text-brand-primary">N</span>
-            <span className="absolute bottom-4 font-bold text-text-muted/40">S</span>
-            <span className="absolute right-4 font-bold text-text-muted/40">E</span>
-            <span className="absolute left-4 font-bold text-text-muted/40">W</span>
+            <span className="absolute top-2 text-xs font-bold text-brand-primary">N</span>
+            <span className="absolute bottom-2 text-xs font-bold text-text-muted/40">S</span>
+            <span className="absolute right-2 text-xs font-bold text-text-muted/40">E</span>
+            <span className="absolute left-2 text-xs font-bold text-text-muted/40">W</span>
             
             {/* Degree Marks */}
             {[...Array(36)].map((_, i) => (
               <div 
                 key={i} 
-                className={`absolute w-0.5 ${i % 9 === 0 ? 'h-3 bg-brand-primary' : 'h-1.5 bg-text-muted/20'}`} 
-                style={{ transform: `rotate(${i * 10}deg) translateY(-130px)` }} 
+                className={`absolute w-0.5 ${i % 9 === 0 ? 'h-2.5 bg-brand-primary' : 'h-1 bg-text-muted/20'}`} 
+                style={{ transform: `rotate(${i * 10}deg) translateY(-105px)` }} 
               />
             ))}
 
@@ -1446,23 +1650,23 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
             {qiblaDirection !== null && (
               <div 
                 className="absolute flex flex-col items-center"
-                style={{ transform: `rotate(${qiblaDirection}deg) translateY(-110px)` }}
+                style={{ transform: `rotate(${qiblaDirection}deg) translateY(-85px)` }}
               >
                 <motion.div 
-                  animate={{ scale: aligned ? 1.2 : 1 }}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors duration-300 ${aligned ? 'bg-brand-primary text-brand-dark' : 'bg-brand-dark text-brand-primary border border-brand-primary/30'}`}
+                  animate={{ scale: aligned ? 1.1 : 1 }}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-300 ${aligned ? 'bg-brand-primary text-brand-dark' : 'bg-brand-dark text-brand-primary border border-brand-primary/30'}`}
                 >
-                  <MosqueIcon size={20} />
+                  <MosqueIcon size={16} />
                 </motion.div>
-                <div className={`w-1 h-24 mt-2 transition-opacity duration-300 ${aligned ? 'bg-brand-primary opacity-40' : 'bg-brand-primary opacity-10'}`} />
+                <div className={`w-1 h-16 mt-1 transition-opacity duration-300 ${aligned ? 'bg-brand-primary opacity-40' : 'bg-brand-primary opacity-10'}`} />
               </div>
             )}
           </motion.div>
 
           {/* Center Needle (Fixed) */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className={`w-1 h-32 rounded-full shadow-lg transition-colors duration-300 ${aligned ? 'bg-brand-primary' : 'bg-brand-primary/40'}`} />
-            <div className="w-5 h-5 rounded-full bg-brand-primary border-4 border-brand-dark shadow-xl" />
+            <div className={`w-1 h-24 rounded-full shadow-lg transition-colors duration-300 ${aligned ? 'bg-brand-primary' : 'bg-brand-primary/40'}`} />
+            <div className="w-4 h-4 rounded-full bg-brand-primary border-4 border-brand-dark shadow-xl" />
           </div>
 
           {/* Alignment Glow */}
@@ -1477,16 +1681,16 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
         </div>
 
         {/* Info & Controls */}
-        <div className="text-center space-y-6">
+        <div className="text-center space-y-4">
           {error ? (
-            <p className="text-red-400 text-sm font-medium bg-red-400/10 px-4 py-2 rounded-lg">{error}</p>
+            <p className="text-red-400 text-xs font-medium bg-red-400/10 px-4 py-2 rounded-lg">{error}</p>
           ) : (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-text-muted text-[10px] font-bold uppercase tracking-[0.2em]">
+            <div className="space-y-3">
+              <div className="space-y-0.5">
+                <p className="text-text-muted text-[9px] font-bold uppercase tracking-[0.2em]">
                   {language === 'ar' ? 'اتجاه القبلة' : 'Qibla Direction'}
                 </p>
-                <h3 className={`text-4xl font-bold font-mono transition-colors duration-300 ${aligned ? 'text-brand-primary' : 'text-text-main'}`}>
+                <h3 className={`text-3xl font-bold font-mono transition-colors duration-300 ${aligned ? 'text-brand-primary' : 'text-text-main'}`}>
                   {qiblaDirection ? `${Math.round(qiblaDirection)}°` : '--°'}
                 </h3>
               </div>
@@ -1511,10 +1715,10 @@ function QiblaView({ onBack, language }: { onBack: () => void, language: Languag
             </div>
           )}
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <button 
               onClick={requestPermission}
-              className="px-8 py-3 rounded-2xl bg-brand-primary text-brand-dark text-xs font-bold shadow-lg shadow-brand-primary/20 hover:scale-105 transition-all active:scale-95"
+              className="px-6 py-2.5 rounded-xl bg-brand-primary text-brand-dark text-[10px] font-bold shadow-lg shadow-brand-primary/20 hover:scale-105 transition-all active:scale-95"
             >
               {language === 'ar' ? 'معايرة البوصلة' : 'Calibrate Compass'}
             </button>
