@@ -47,7 +47,7 @@ import {
   Check
 } from "lucide-react";
 import { Coordinates, CalculationMethod, PrayerTimes } from "adhan";
-import { cn, MORNING_DHIKR, EVENING_DHIKR, BUKHARI_MUSLIM_DHIKR, DUAS, PRAYER_NAMES, DhikrItem } from "./lib/utils";
+import { cn, MORNING_DHIKR, EVENING_DHIKR, BUKHARI_MUSLIM_DHIKR, DUAS, SAHIH_BUKHARI, SAHIH_MUSLIM, HADITHS, PRAYER_NAMES, DhikrItem } from "./lib/utils";
 import { SURAHS } from "./lib/quranData";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { translations, Language } from "./translations";
@@ -69,8 +69,17 @@ export default function App() {
   const [primaryColor, setPrimaryColor] = useState("#0bda84");
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [language, setLanguage] = useState<Language>("ar");
-
+  const [dhikrCategory, setDhikrCategory] = useState<string | null>(null);
+  const [showAllSections, setShowAllSections] = useState(false);
   const t = translations[language];
+
+  const getHadithOfDay = () => {
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+    return HADITHS[dayOfYear % HADITHS.length];
+  };
+
+  const hadithOfDay = getHadithOfDay();
 
   useEffect(() => {
     // Apply primary color globally
@@ -381,8 +390,13 @@ export default function App() {
 
               {/* Main Sections Header */}
               <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-text-main">{t.mainSections}</h3>
-                <button className="text-[10px] text-brand-primary font-medium">{t.viewAll}</button>
+                <h3 className="text-sm font-bold text-text-main">{t.mainSections}</h3>
+                <button 
+                  onClick={() => setShowAllSections(!showAllSections)}
+                  className="text-[10px] text-brand-primary font-medium"
+                >
+                  {showAllSections ? (language === 'ar' ? 'إخفاء' : 'Hide') : t.viewAll}
+                </button>
               </div>
 
               {/* Main Sections Grid */}
@@ -396,7 +410,11 @@ export default function App() {
                 <SectionButton 
                   icon={<BookOpen />} 
                   title={t.supplications} 
-                  subtitle={t.supplications} 
+                  subtitle="أدعية الكتاب والسنة" 
+                  onClick={() => {
+                    setDhikrCategory("duas");
+                    setActiveView("dhikr");
+                  }}
                 />
                 <SectionButton 
                   icon={<Calendar />} 
@@ -410,6 +428,28 @@ export default function App() {
                   subtitle={t.quranTafsir} 
                   onClick={() => setActiveView("quran")}
                 />
+                {showAllSections && (
+                  <>
+                    <SectionButton 
+                      icon={<Library className="text-brand-primary" />} 
+                      title="صحيح البخاري" 
+                      subtitle="أحاديث نبوية شريفة" 
+                      onClick={() => {
+                        setDhikrCategory("bukhari");
+                        setActiveView("dhikr");
+                      }}
+                    />
+                    <SectionButton 
+                      icon={<Library className="text-emerald-400" />} 
+                      title="صحيح مسلم" 
+                      subtitle="أحاديث نبوية شريفة" 
+                      onClick={() => {
+                        setDhikrCategory("muslim");
+                        setActiveView("dhikr");
+                      }}
+                    />
+                  </>
+                )}
               </div>
 
               {/* Hadith of the Day */}
@@ -422,9 +462,9 @@ export default function App() {
                   <Quote size={14} className="text-brand-primary" />
                 </div>
                 <p className="text-xs leading-relaxed text-text-main/90 text-center font-medium">
-                  "إنما الأعمال بالنيات، وإنما لكل امرئ ما نوى"
+                  "{hadithOfDay.text}"
                 </p>
-                <p className="text-[9px] text-text-muted mt-3 text-left">— رواه البخاري</p>
+                <p className="text-[9px] text-text-muted mt-3 text-left">— {hadithOfDay.source}</p>
               </div>
 
               {/* Extra Services */}
@@ -439,7 +479,16 @@ export default function App() {
             </motion.div>
           )}
 
-          {activeView === "dhikr" && <DhikrView onBack={() => setActiveView("home")} language={language} />}
+          {activeView === "dhikr" && (
+            <DhikrView 
+              onBack={() => {
+                setActiveView("home");
+                setDhikrCategory(null);
+              }} 
+              language={language} 
+              initialCategory={dhikrCategory}
+            />
+          )}
           {activeView === "subha" && <SubhaView onBack={() => setActiveView("home")} language={language} />}
           {activeView === "quran" && <QuranView onBack={() => setActiveView("home")} language={language} />}
           {activeView === "calendar" && <CalendarView onBack={() => setActiveView("home")} language={language} />}
@@ -547,10 +596,16 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: Re
   );
 }
 
-function DhikrView({ onBack, language }: { onBack: () => void, language: Language }) {
+function DhikrView({ onBack, language, initialCategory }: { onBack: () => void, language: Language, initialCategory?: string | null }) {
   const t = translations[language];
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory || null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   if (activeCategory) {
     return <DhikrDetailView category={activeCategory} onBack={() => setActiveCategory(null)} language={language} />;
@@ -562,7 +617,10 @@ function DhikrView({ onBack, language }: { onBack: () => void, language: Languag
     { id: "sleep", title: "أذكار النوم", subtitle: "ما يقرأه المسلم قبل النوم", icon: <Bed className="text-blue-400" /> },
     { id: "prayer", title: "أذكار الصلاة", subtitle: "أدعية الاستفتاح والركوع والسجود", icon: <Heart className="text-red-400" /> },
     { id: "travel", title: "أذكار السفر", subtitle: "أدعية السفر والترحال", icon: <Plane className="text-emerald-400" /> },
-    { id: "quranic", title: "أدعية قرآنية", subtitle: "أدعية من القرآن الكريم", icon: <BookOpen className="text-amber-400" /> },
+    { id: "quranic", title: t.quranicDuas, subtitle: "أدعية من القرآن الكريم", icon: <BookOpen className="text-amber-400" /> },
+    { id: "duas", title: t.sunnahDuas, subtitle: "أدعية من السنة النبوية", icon: <Sparkles className="text-emerald-400" /> },
+    { id: "bukhari", title: "صحيح البخاري", subtitle: "أحاديث نبوية شريفة", icon: <Library className="text-brand-primary" /> },
+    { id: "muslim", title: "صحيح مسلم", subtitle: "أحاديث نبوية شريفة", icon: <Library className="text-emerald-400" /> },
   ];
 
   const filteredCategories = categories.filter(cat => 
@@ -773,6 +831,34 @@ function DhikrCard({ item, language }: { item: DhikrItem, language: string, key?
         {item.text}
       </p>
 
+      {/* Reason & Benefit */}
+      {(item.reason || item.benefit) && (
+        <div className="space-y-3 pt-2 border-t border-brand-border/30">
+          {item.reason && (
+            <div className="flex gap-2 items-start text-right">
+              <div className="flex-1">
+                <p className="text-[10px] text-brand-primary font-bold mb-0.5 flex items-center gap-1 justify-end">
+                  <span>سبب الدعاء</span>
+                  <Sparkles size={10} />
+                </p>
+                <p className="text-[11px] text-text-muted leading-relaxed">{item.reason}</p>
+              </div>
+            </div>
+          )}
+          {item.benefit && (
+            <div className="flex gap-2 items-start text-right">
+              <div className="flex-1">
+                <p className="text-[10px] text-emerald-400 font-bold mb-0.5 flex items-center gap-1 justify-end">
+                  <span>الفضل والأثر</span>
+                  <Heart size={10} />
+                </p>
+                <p className="text-[11px] text-text-muted leading-relaxed">{item.benefit}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between pt-5 border-t border-brand-border/50 relative z-10">
         <button 
           onClick={handleIncrement}
@@ -812,15 +898,19 @@ function DhikrCard({ item, language }: { item: DhikrItem, language: string, key?
 
 function DhikrDetailView({ category, onBack, language }: { category: string, onBack: () => void, language: Language }) {
   const t = translations[language];
+  const [activeSubFilter, setActiveSubFilter] = useState(category === "quranic" ? "quranic" : "all");
   
   const getItems = () => {
     switch (category) {
       case "morning": return MORNING_DHIKR;
       case "evening": return EVENING_DHIKR;
       case "prayer": return BUKHARI_MUSLIM_DHIKR;
+      case "bukhari": return SAHIH_BUKHARI;
+      case "muslim": return SAHIH_MUSLIM;
       case "sleep":
       case "travel":
       case "quranic":
+      case "duas":
       default: return DUAS;
     }
   };
@@ -833,15 +923,21 @@ function DhikrDetailView({ category, onBack, language }: { category: string, onB
     sleep: "أذكار النوم",
     prayer: "أذكار الصلاة",
     travel: "أذكار السفر",
-    quranic: "أدعية قرآنية"
+    quranic: "أدعية قرآنية",
+    duas: t.supplications,
+    bukhari: "صحيح البخاري",
+    muslim: "صحيح مسلم"
   };
 
   const title = categoryTitles[category] || t.allDhikr;
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredItems = items.filter(item => 
-    item.text.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.text.toLowerCase().includes(searchQuery.toLowerCase());
+    if (activeSubFilter === "all") return matchesSearch;
+    const targetCategory = activeSubFilter === "quranic" ? "أدعية قرآنية" : "أدعية نبوية";
+    return matchesSearch && item.category === targetCategory;
+  });
 
   return (
     <motion.div
@@ -860,6 +956,30 @@ function DhikrDetailView({ category, onBack, language }: { category: string, onB
         </div>
         <div className="w-10" />
       </div>
+
+      {/* Sub-filters for Duas */}
+      {(category === "duas" || category === "quranic") && (
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+          {[
+            { id: "all", label: "الكل" },
+            { id: "quranic", label: t.quranicDuas },
+            { id: "sunnah", label: t.sunnahDuas }
+          ].map(filter => (
+            <button
+              key={filter.id}
+              onClick={() => setActiveSubFilter(filter.id)}
+              className={cn(
+                "px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border",
+                activeSubFilter === filter.id 
+                  ? "bg-brand-primary text-brand-dark border-brand-primary shadow-lg shadow-brand-primary/20" 
+                  : "bg-brand-surface text-text-muted border-brand-border hover:border-brand-primary/30"
+              )}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Local Search */}
       <div className="relative">
